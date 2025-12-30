@@ -3,6 +3,11 @@ A custom MangaCMS built on NET.ASP MVC and Razor pages.
 
 #### Note: Only this README will be updated. The others you see in this repo will NOT be updated.
 
+## Setting ENV variables:
+
+Update `Program.cs`'s variables with you database's FTP/SSH credentials.
+Also make sure to add the IP and PORT your database is hosted on.
+
 ## Compiling the code:
 #### Note: This is not neccessary but it is recommended as sometimes I'll probably forget to compile it myself and you'll be using an older version.
 #### Note: All commands should be run in the root directory of the project.
