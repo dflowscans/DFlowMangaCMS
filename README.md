@@ -5,7 +5,7 @@ A custom MangaCMS built on NET.ASP MVC and Razor pages.
 
 ## Setting ENV variables:
 
-Update `Program.cs`'s variables with you database's FTP/SSH credentials.
+Update `Program.cs`'s variables with you database's FTP/SSH credentials.<br>
 Also make sure to add the IP and PORT your database is hosted on.
 
 ## Compiling the code:
