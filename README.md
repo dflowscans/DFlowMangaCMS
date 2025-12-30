@@ -7,6 +7,9 @@ A custom MangaCMS built on NET.ASP MVC and Razor pages.
 Please don't make any issues about that.<br>
 I plan to add it in the somewhat near future.
 
+### Note:
+- Profile image uploads still work as well as all other image uploads.
+
 #### Note: Only this README will be updated. The others you see in this repo will NOT be updated.
 
 # 🌍 Environment Configuration Guide
