@@ -1,0 +1,50 @@
+@model MangaReader.Models.ChangelogEntry
+
+@{
+    ViewData["Title"] = "Edit Changelog Entry";
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm border-0" style="background: var(--bg-secondary);">
+                <div class="card-header bg-info text-white border-0 py-3">
+                    <h3 class="card-title mb-0">Edit Changelog Entry</h3>
+                </div>
+                <div class="card-body p-4">
+                    <form asp-action="EditChangelog">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                        <input type="hidden" asp-for="Id" />
+                        
+                        <div class="mb-3">
+                            <label asp-for="Title" class="form-label text-white">Title</label>
+                            <input asp-for="Title" class="form-control bg-dark text-white border-secondary" />
+                            <span asp-validation-for="Title" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="CreatedAt" class="form-label text-white">Date</label>
+                            <input asp-for="CreatedAt" type="datetime-local" class="form-control bg-dark text-white border-secondary" value="@Model.CreatedAt.ToString("yyyy-MM-ddTHH:mm")" />
+                            <span asp-validation-for="CreatedAt" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Content" class="form-label text-white">Content (Markdown supported)</label>
+                            <textarea asp-for="Content" class="form-control bg-dark text-white border-secondary" rows="10"></textarea>
+                            <span asp-validation-for="Content" class="text-danger"></span>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mt-4">
+                            <a asp-action="ChangelogList" class="btn btn-outline-light">Back to List</a>
+                            <button type="submit" class="btn btn-info px-4">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

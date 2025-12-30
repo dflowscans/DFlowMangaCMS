@@ -1,0 +1,243 @@
+@model MangaReader.Models.Manga
+
+@{
+    ViewData["Title"] = Model?.Id > 0 ? "Edit Manga" : "Create New Manga";
+}
+
+<div class="container-fluid">
+    <div class="section-header mb-4">
+        <h2>@ViewData["Title"]</h2>
+        <div class="section-header-divider"></div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <form asp-action="@(Model?.Id > 0 ? "EditManga" : "CreateManga")" method="post" style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 2rem;">
+                @if (Model?.Id > 0)
+                {
+                    <input type="hidden" asp-for="Id" />
+                    <input type="hidden" asp-for="CreatedAt" />
+                }
+
+                <div class="mb-3">
+                    <label asp-for="Title" class="form-label">Title *</label>
+                    <input asp-for="Title" class="form-control" placeholder="Enter manga title"
+                           style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);" required>
+                    <span asp-validation-for="Title" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Description" class="form-label">Description</label>
+                    <textarea asp-for="Description" class="form-control" rows="4" placeholder="Enter manga description"
+                              style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);"></textarea>
+                    <span asp-validation-for="Description" class="text-danger"></span>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Author" class="form-label">Author</label>
+                        <input asp-for="Author" class="form-control" placeholder="Author name"
+                               style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                        <span asp-validation-for="Author" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Artist" class="form-label">Artist</label>
+                        <input asp-for="Artist" class="form-control" placeholder="Artist name"
+                               style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                        <span asp-validation-for="Artist" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="ImageUrl" class="form-label">Image URL</label>
+                        <input asp-for="ImageUrl" class="form-control" placeholder="https://..."
+                               style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                        <span asp-validation-for="ImageUrl" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="BannerUrl" class="form-label">Banner URL</label>
+                        <input asp-for="BannerUrl" class="form-control" placeholder="https://..."
+                               style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                        <span asp-validation-for="BannerUrl" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Type" class="form-label">Type</label>
+                        <select asp-for="Type" class="form-select"
+                                style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                            <option value="">Select Type</option>
+                            <option value="Manga">Manga</option>
+                            <option value="Manhua">Manhua</option>
+                            <option value="Manhwa">Manhwa</option>
+                        </select>
+                        <span asp-validation-for="Type" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Status" class="form-label">Status</label>
+                        <select asp-for="Status" class="form-select"
+                                style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                            <option value="">Select Status</option>
+                            <option value="Ongoing">Ongoing</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Dropped">Dropped</option>
+                            <option value="On Hold">On Hold</option>
+                            <option value="Coming Soon">Coming Soon</option>
+                        </select>
+                        <span asp-validation-for="Status" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Genre" class="form-label">Genres (comma-separated)</label>
+                        <input asp-for="Genre" class="form-control" placeholder="Action, Adventure, Shounen"
+                               style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                        <span asp-validation-for="Genre" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Banner Position X</label>
+                        <input asp-for="BannerPositionX" type="range" min="0" max="100" class="form-range" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Banner Position Y</label>
+                        <input asp-for="BannerPositionY" type="range" min="0" max="100" class="form-range" />
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-check">
+                            <input asp-for="HasTitleShadow" type="checkbox" class="form-check-input" id="titleShadow">
+                            <label class="form-check-label" for="titleShadow">Add title shadow on featured banner</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Shadow Size (px)</label>
+                        <input asp-for="TitleShadowSize" type="range" min="0" max="40" class="form-range" />
+                        <small style="color: var(--text-muted);">@Model?.TitleShadowSize px</small>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Shadow Darkness</label>
+                        <input asp-for="TitleShadowOpacity" type="range" min="0" max="2" step="0.01" class="form-range" />
+                        <small style="color: var(--text-muted);">@Model?.TitleShadowOpacity</small>
+                    </div>
+                </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const bannerUrlInput = document.querySelector('[name="BannerUrl"]');
+  const imageUrlInput = document.querySelector('[name="ImageUrl"]');
+  const posX = document.querySelector('[name="BannerPositionX"]');
+  const posY = document.querySelector('[name="BannerPositionY"]');
+  const titleShadow = document.querySelector('[name="HasTitleShadow"]');
+  const shadowSize = document.querySelector('[name="TitleShadowSize"]');
+  const shadowOpacity = document.querySelector('[name="TitleShadowOpacity"]');
+  const bannerPreview = document.getElementById('bannerPreview');
+  const bannerTitle = document.getElementById('bannerTitle');
+
+  function buildShadow(size, opacity) {
+    const a = Math.min(opacity, 1);
+    const b = Math.max(opacity - 1, 0);
+    if (b > 0) {
+      const bClamped = Math.min(b, 1);
+      return `0 2px ${size}px rgba(0,0,0,1), 0 2px ${size}px rgba(0,0,0,${bClamped})`;
+    }
+    return `0 2px ${size}px rgba(0,0,0,${a})`;
+  }
+
+  function updatePreview() {
+    const src = (bannerUrlInput?.value?.trim()) || (imageUrlInput?.value?.trim()) || '/images/default.jpg';
+    if (bannerPreview) {
+      bannerPreview.style.backgroundImage = `url('${src}')`;
+      bannerPreview.style.backgroundPosition = `${posX?.value || 50}% ${posY?.value || 50}%`;
+    }
+    if (bannerTitle) {
+      const size = parseInt(shadowSize?.value || @Model?.TitleShadowSize ?? 12);
+      const opacity = parseFloat(shadowOpacity?.value || @Model?.TitleShadowOpacity ?? 0.8);
+      bannerTitle.style.textShadow = (titleShadow?.checked) ? buildShadow(size, opacity) : 'none';
+    }
+  }
+
+  [bannerUrlInput, imageUrlInput, posX, posY, titleShadow, shadowSize, shadowOpacity].forEach(el => {
+    el?.addEventListener('input', updatePreview);
+    el?.addEventListener('change', updatePreview);
+  });
+
+  updatePreview();
+});
+</script>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Rating" class="form-label">Rating (1-10)</label>
+                        <input asp-for="Rating" type="number" min="1" max="10" class="form-control"
+                               style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                        <span asp-validation-for="Rating" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="AniListId" class="form-label">AniList ID (Optional)</label>
+                        <input asp-for="AniListId" type="number" class="form-control" placeholder="e.g. 12345"
+                               style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                        <span asp-validation-for="AniListId" class="text-danger"></span>
+                        <small class="text-muted">Used for exporting reading list to AniList.</small>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="form-check" style="padding-top: 0.5rem;">
+                            <input asp-for="IsFeatured" type="checkbox" class="form-check-input" id="featured">
+                            <label class="form-check-label" for="featured">
+                                <i class="fas fa-star" style="color: var(--accent);"></i> Mark as Featured
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save me-2"></i>@(Model?.Id > 0 ? "Update" : "Create") Manga
+                    </button>
+                    <a href="@Url.Action("MangaList", "Admin")" class="btn btn-secondary">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-lg-4">
+            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.5rem;">
+                <h5 style="margin-top: 0;">Preview</h5>
+                @if (!string.IsNullOrEmpty(Model?.ImageUrl))
+                {
+                    <img src="@Model.ImageUrl" alt="@Model.Title" style="width: 100%; border-radius: 8px; margin-bottom: 1rem;">
+                }
+                <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 8px;">
+                    <h6 style="margin: 0 0 0.5rem 0;">@Model?.Title</h6>
+                    <p style="margin: 0.3rem 0; font-size: 0.9rem; color: var(--text-muted);">
+                        <i class="fas fa-user me-1"></i>@Model?.Author
+                    </p>
+                    <p style="margin: 0.3rem 0; font-size: 0.9rem; color: var(--text-muted);">
+                        <i class="fas fa-star me-1" style="color: var(--accent);"></i>@Model?.Rating/10
+                    </p>
+                    <p style="margin: 0.3rem 0; font-size: 0.9rem;">
+                        <span style="background: var(--primary-color); color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">
+                            @Model?.Status
+                        </span>
+                    </p>
+                </div>
+                <div style="margin-top: 1rem; position: relative;">
+                    <div id="bannerPreview" style="height: 180px; border-radius: 8px; background-size: cover; background-position: @(Model?.BannerPositionX ?? 50)% @(Model?.BannerPositionY ?? 50)%; background-image: url('@(Model?.BannerUrl ?? Model?.ImageUrl ?? "/images/default.jpg")');"></div>
+                    <div id="bannerTitle" style="position:absolute; left:12px; bottom:12px; font-weight:700; font-size:1rem; color:white; text-shadow:@((Model?.HasTitleShadow ?? false) ? $"0 2px {(Model?.TitleShadowSize ?? 12)}px rgba(0,0,0,{(Model?.TitleShadowOpacity ?? 0.8)})" : "none");">@Model?.Title</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,7 @@
+@model MangaReader.Models.ChapterPage
+
+@{
+    ViewData["Title"] = "Edit Page";
+}
+
+@await Html.PartialAsync("~/Views/Admin/CreatePage.cshtml", Model)

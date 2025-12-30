@@ -1,0 +1,121 @@
+@model IEnumerable<MangaReader.Models.ChangelogEntry>
+
+@{
+    ViewData["Title"] = "Changelog";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-history fa-2x text-primary me-3"></i>
+                    <h1 class="mb-0 fw-bold text-white">Site Changelog</h1>
+                </div>
+                @if (User.Identity?.IsAuthenticated ?? false)
+                {
+                    <button id="followChangelogBtn" class="btn @(ViewBag.FollowingChangelog == true ? "btn-outline-primary" : "btn-primary")" onclick="toggleFollowChangelog()">
+                        <i class="fas @(ViewBag.FollowingChangelog == true ? "fa-bell-slash" : "fa-bell") me-2"></i>
+                        <span id="followText">@(ViewBag.FollowingChangelog == true ? "Unfollow Updates" : "Follow Updates")</span>
+                    </button>
+                }
+            </div>
+            <p class="text-white-50 mb-5">Stay updated with the latest changes, features, and fixes on DFlowScans.</p>
+
+            @if (Model != null && Model.Any())
+            {
+                <div class="changelog-timeline">
+                    @foreach (var entry in Model)
+                    {
+                        <div class="card mb-4 border-0 shadow-sm" style="background: var(--bg-secondary); border-radius: 15px; overflow: hidden;">
+                            <div class="card-header border-0 d-flex justify-content-between align-items-center py-3" style="background: rgba(99, 102, 241, 0.1);">
+                                <h4 class="mb-0 text-white fw-bold">@entry.Title</h4>
+                                <span class="badge bg-primary rounded-pill">@entry.CreatedAt.ToString("MMM dd, yyyy")</span>
+                            </div>
+                            <div class="card-body p-4">
+                                <div class="changelog-content text-white" style="line-height: 1.6;">
+                                    @Html.Raw(Markdig.Markdown.ToHtml(entry.Content))
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5" style="background: var(--bg-secondary); border-radius: 15px; border: 2px dashed var(--border-color);">
+                    <i class="fas fa-ghost fa-3x text-white-50 mb-3"></i>
+                    <h5 class="text-white-50">No changelog entries yet.</h5>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .changelog-content h1, .changelog-content h2, .changelog-content h3 {
+        color: var(--primary-light);
+        margin-top: 1.5rem;
+        margin-bottom: 1rem;
+        font-weight: 600;
+    }
+    .changelog-content ul {
+        padding-left: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    .changelog-content li {
+        margin-bottom: 0.5rem;
+    }
+    .changelog-content a {
+        color: var(--primary-light);
+        text-decoration: underline;
+    }
+    .changelog-content a:hover {
+        color: var(--accent);
+    }
+    .changelog-content code {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 0.2rem 0.4rem;
+        border-radius: 4px;
+        color: #e68a00;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        async function toggleFollowChangelog() {
+            const btn = document.getElementById('followChangelogBtn');
+            const text = document.getElementById('followText');
+            const icon = btn.querySelector('i');
+            
+            try {
+                const response = await fetch('@Url.Action("ToggleFollowChangelog", "Home")', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    if (data.following) {
+                        btn.classList.remove('btn-primary');
+                        btn.classList.add('btn-outline-primary');
+                        icon.classList.remove('fa-bell');
+                        icon.classList.add('fa-bell-slash');
+                        text.textContent = 'Unfollow Updates';
+                    } else {
+                        btn.classList.remove('btn-outline-primary');
+                        btn.classList.add('btn-primary');
+                        icon.classList.remove('fa-bell-slash');
+                        icon.classList.add('fa-bell');
+                        text.textContent = 'Follow Updates';
+                    }
+                }
+            } catch (error) {
+                console.error('Error toggling follow status:', error);
+            }
+        }
+    </script>
+}

@@ -1,0 +1,51 @@
+@model IEnumerable<MangaReader.Models.ChangelogEntry>
+
+@{
+    ViewData["Title"] = "Changelog Management";
+    Layout = "_Layout";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Changelog Management</h1>
+        <a asp-action="CreateChangelog" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>New Entry
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0" style="background: var(--bg-secondary);">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 text-white">
+                    <thead style="background: rgba(255,255,255,0.05);">
+                        <tr>
+                            <th class="ps-4">Title</th>
+                            <th>Date</th>
+                            <th class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="ps-4">@item.Title</td>
+                                <td>@item.CreatedAt.ToString("MMM dd, yyyy")</td>
+                                <td class="text-end pe-4">
+                                    <a asp-action="EditChangelog" asp-route-id="@item.Id" class="btn btn-sm btn-outline-info me-2">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <form asp-action="DeleteChangelog" asp-route-id="@item.Id" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this entry?');">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

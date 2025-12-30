@@ -1,0 +1,405 @@
+@model AdminDashboardViewModel
+
+@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<div class="container-fluid">
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="section-header mb-5">
+        <h2>Admin Dashboard</h2>
+        <div class="section-header-divider"></div>
+    </div>
+
+    @if (ViewBag.DatabaseFixNeeded == true)
+    {
+        <div class="alert alert-danger border-2 shadow-sm mb-5" style="background: rgba(239, 68, 68, 0.1); border-color: #ef4444; border-radius: 10px; padding: 1.5rem;">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                <div>
+                    <h4 class="alert-heading mb-1" style="color: #f87171;">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Database Fix Required
+                    </h4>
+                    <ul class="mb-0 text-white-50 small">
+                        @if (ViewBag.ParentCommentIdMissing == true)
+                        {
+                            <li>Missing <code>ParentCommentId</code> column in <code>ChapterComments</code> (required for replies).</li>
+                        }
+                        @if (ViewBag.SiteSettingsTableMissing == true)
+                        {
+                            <li>Missing <code>SiteSettings</code> table (required for global site toggles).</li>
+                        }
+                        @if (ViewBag.NotificationsTableMissing == true)
+                        {
+                            <li>Missing <code>Notifications</code> table (required for system alerts).</li>
+                        }
+                        @if (ViewBag.AniListIdMissing == true)
+                        {
+                            <li>Missing <code>AniListId</code> column in <code>Mangas</code> table (required for AniList sync).</li>
+                        }
+                    </ul>
+                </div>
+                <form asp-action="FixDatabase" method="post" class="m-0">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger px-4">
+                        <i class="fas fa-tools me-2"></i>Apply Fixes Now
+                    </button>
+                </form>
+            </div>
+        </div>
+    }
+
+    <!-- Stats Cards -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-3">
+            <div style="background: linear-gradient(135deg, #6366f1, #818cf8); border-radius: 10px; padding: 2rem; color: white; transition: transform 0.2s; cursor: default;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <p style="margin: 0; opacity: 0.9; font-size: 0.9rem; font-weight: 500;">Total Manga</p>
+                        <h3 style="margin: 0.5rem 0 0 0; font-size: 2.2rem; font-weight: 800;">@Model.TotalManga</h3>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.2); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-book" style="font-size: 1.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div style="background: linear-gradient(135deg, #ec4899, #f472b6); border-radius: 10px; padding: 2rem; color: white; transition: transform 0.2s; cursor: default;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <p style="margin: 0; opacity: 0.9; font-size: 0.9rem; font-weight: 500;">Total Chapters</p>
+                        <h3 style="margin: 0.5rem 0 0 0; font-size: 2.2rem; font-weight: 800;">@Model.TotalChapters</h3>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.2); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-list" style="font-size: 1.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div style="background: linear-gradient(135deg, #10b981, #34d399); border-radius: 10px; padding: 2rem; color: white; transition: transform 0.2s; cursor: default;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <p style="margin: 0; opacity: 0.9; font-size: 0.9rem; font-weight: 500;">Total Pages</p>
+                        <h3 style="margin: 0.5rem 0 0 0; font-size: 2.2rem; font-weight: 800;">@Model.TotalPages</h3>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.2); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-images" style="font-size: 1.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div style="background: linear-gradient(135deg, #f59e0b, #fbbf24); border-radius: 10px; padding: 2rem; color: white; transition: transform 0.2s; cursor: default;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <p style="margin: 0; opacity: 0.9; font-size: 0.9rem; font-weight: 500;">Total Views</p>
+                        <h3 style="margin: 0.5rem 0 0 0; font-size: 2.2rem; font-weight: 800;">@Model.TotalViews</h3>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.2); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-eye" style="font-size: 1.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.5rem;">
+                <h4 style="margin-top: 0; color: var(--text-primary);">
+                    <i class="fas fa-layer-group me-2" style="color: #6366f1;"></i>Featured Banner Shadow
+                </h4>
+                <p style="color: var(--text-muted); margin: 0.5rem 0 1rem 0;">Add a text shadow to the description on the home page banner for better readability.</p>
+                <form asp-action="UpdateSiteSettings" method="post" class="m-0">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="key" value="EnableBannerShadow" />
+                    <input type="hidden" name="value" value="@(ViewBag.EnableBannerShadow == "true" ? "false" : "true")" />
+                    <button type="submit" class="btn @(ViewBag.EnableBannerShadow == "true" ? "btn-success" : "btn-outline-danger") mb-3">
+                        <i class="fas @(ViewBag.EnableBannerShadow == "true" ? "fa-toggle-on" : "fa-toggle-off") me-1"></i>
+                        @(ViewBag.EnableBannerShadow == "true" ? "Shadow Enabled" : "Shadow Disabled")
+                    </button>
+                </form>
+
+                @if (ViewBag.EnableBannerShadow == "true")
+                {
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <form asp-action="UpdateSiteSettings" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="key" value="BannerShadowStrength" />
+                                <label class="form-label text-white-50 small">Shadow Strength (0.1 - 1.0)</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="range" class="form-range" name="value" min="0.1" max="1.0" step="0.1" value="@ViewBag.BannerShadowStrength" onchange="this.form.submit()">
+                                    <span class="ms-2 text-white">@ViewBag.BannerShadowStrength</span>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="col-md-6">
+                            <form asp-action="UpdateSiteSettings" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="key" value="BannerShadowDepth" />
+                                <label class="form-label text-white-50 small">Shadow Blur/Depth (0 - 20px)</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="range" class="form-range" name="value" min="0" max="20" step="1" value="@ViewBag.BannerShadowDepth" onchange="this.form.submit()">
+                                    <span class="ms-2 text-white">@ViewBag.BannerShadowDepth px</span>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Site Settings & Quick Actions -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-6">
+            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.5rem; height: 100%;">
+                <h4 style="margin-top: 0; color: var(--text-primary); margin-bottom: 1.5rem; display: flex; align-items: center;">
+                    <i class="fas fa-cog me-2 text-primary"></i>Site Features Toggle
+                </h4>
+                
+                <div class="d-flex flex-column gap-3">
+                    <div class="p-3 rounded bg-dark d-flex align-items-center justify-content-between border border-secondary">
+                        <div>
+                            <h6 class="mb-1 text-white">PFP Decorations</h6>
+                            <p class="mb-0 text-muted small">Enable or disable PFP decorations across the site</p>
+                        </div>
+                        <form asp-action="UpdateSiteSettings" method="post" class="m-0">
+                            <input type="hidden" name="key" value="EnableDecorations" />
+                            <input type="hidden" name="value" value="@(ViewBag.EnableDecorations == "true" ? "false" : "true")" />
+                            <button type="submit" class="btn @(ViewBag.EnableDecorations == "true" ? "btn-success" : "btn-outline-danger") btn-sm px-3 rounded-pill">
+                                @(ViewBag.EnableDecorations == "true" ? "Enabled" : "Disabled")
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="p-3 rounded bg-dark d-flex align-items-center justify-content-between border border-secondary">
+                        <div>
+                            <h6 class="mb-1 text-white">User Titles</h6>
+                            <p class="mb-0 text-muted small">Enable or disable user titles in comments</p>
+                        </div>
+                        <form asp-action="UpdateSiteSettings" method="post" class="m-0">
+                            <input type="hidden" name="key" value="EnableTitles" />
+                            <input type="hidden" name="value" value="@(ViewBag.EnableTitles == "true" ? "false" : "true")" />
+                            <button type="submit" class="btn @(ViewBag.EnableTitles == "true" ? "btn-success" : "btn-outline-danger") btn-sm px-3 rounded-pill">
+                                @(ViewBag.EnableTitles == "true" ? "Enabled" : "Disabled")
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.5rem; height: 100%;">
+                <h4 style="margin-top: 0; color: var(--text-primary); margin-bottom: 1.5rem; display: flex; align-items: center;">
+                    <i class="fas fa-rocket me-2 text-primary"></i>Quick Actions
+                </h4>
+                    <i class="fas fa-book me-2" style="color: var(--primary-light);"></i>Manga Management
+                </h4>
+                <p style="color: var(--text-muted); margin: 0.5rem 0 1rem 0;">Manage manga series in your collection</p>
+                <a href="@Url.Action("MangaList", "Admin")" class="btn btn-primary me-2">
+                    <i class="fas fa-list me-1"></i>View All
+                </a>
+                <a href="@Url.Action("CreateManga", "Admin")" class="btn btn-success">
+                    <i class="fas fa-plus me-1"></i>Add New
+                </a>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.5rem;">
+                <h4 style="margin-top: 0; color: var(--text-primary);">
+                    <i class="fas fa-cog me-2" style="color: var(--accent);"></i>Quick Stats
+                </h4>
+                <ul style="list-style: none; padding: 0; margin: 0;">
+                    <li style="padding: 0.5rem 0; border-bottom: 1px solid var(--border-color);">
+                        <span style="color: var(--text-muted);">Latest Manga:</span>
+                        <span style="color: var(--text-primary); float: right;">@(Model.RecentManga?.FirstOrDefault()?.Title ?? "N/A")</span>
+                    </li>
+                    <li style="padding: 0.5rem 0;">
+                        <span style="color: var(--text-muted);">Latest Chapter:</span>
+                        <span style="color: var(--text-primary); float: right;">@(Model.RecentChapters?.FirstOrDefault()?.Manga?.Title ?? "N/A")</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Management -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-6">
+            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.5rem;">
+                <h4 style="margin-top: 0; color: var(--text-primary);">
+                    <i class="fas fa-history me-2" style="color: #6366f1;"></i>Changelog Management
+                </h4>
+                <p style="color: var(--text-muted); margin: 0.5rem 0 1rem 0;">Manage site update logs and version history</p>
+                <a href="@Url.Action("ChangelogList", "Admin")" class="btn btn-primary">
+                    <i class="fas fa-list me-1"></i>Manage Changelog
+                </a>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.5rem;">
+                <h4 style="margin-top: 0; color: var(--text-primary);">
+                    <i class="fas fa-users me-2" style="color: var(--primary-light);"></i>User Management
+                </h4>
+                <p style="color: var(--text-muted); margin: 0.5rem 0 1rem 0;">Manage administrator and user accounts</p>
+                <a href="@Url.Action("ManageUsers", "Admin")" class="btn btn-primary">
+                    <i class="fas fa-user-shield me-1"></i>Manage Users
+                </a>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.5rem;">
+                <h4 style="margin-top: 0; color: var(--text-primary);">
+                    <i class="fas fa-smile me-2" style="color: #fbbf24;"></i>Emoji Management
+                </h4>
+                <p style="color: var(--text-muted); margin: 0.5rem 0 1rem 0;">Customize comment emojis and images</p>
+                <a href="@Url.Action("ManageEmojis", "Admin")" class="btn btn-warning" style="color: #000;">
+                    <i class="fas fa-smile me-1"></i>Manage Emojis
+                </a>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.5rem;">
+                <h4 style="margin-top: 0; color: var(--text-primary);">
+                    <i class="fas fa-certificate me-2" style="color: #6366f1;"></i>PFP Decorations
+                </h4>
+                <p style="color: var(--text-muted); margin: 0.5rem 0 1rem 0;">Add or edit profile picture decorations</p>
+                <div class="d-flex align-items-center gap-3">
+                    <a href="@Url.Action("ManageDecorations", "Admin")" class="btn btn-primary">
+                        <i class="fas fa-magic me-1"></i>Manage Decorations
+                    </a>
+                    <form asp-action="UpdateSiteSettings" method="post" class="m-0">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="key" value="EnableDecorations" />
+                        <input type="hidden" name="value" value="@(ViewBag.EnableDecorations == "true" ? "false" : "true")" />
+                        <button type="submit" class="btn @(ViewBag.EnableDecorations == "true" ? "btn-success" : "btn-outline-danger") btn-sm">
+                            @(ViewBag.EnableDecorations == "true" ? "Enabled" : "Disabled")
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.5rem;">
+                <h4 style="margin-top: 0; color: var(--text-primary);">
+                    <i class="fas fa-id-badge me-2" style="color: #ec4899;"></i>User Titles
+                </h4>
+                <p style="color: var(--text-muted); margin: 0.5rem 0 1rem 0;">Add or edit level-unlocked user titles</p>
+                <div class="d-flex align-items-center gap-3">
+                    <a href="@Url.Action("ManageTitles", "Admin")" class="btn btn-primary">
+                        <i class="fas fa-award me-1"></i>Manage Titles
+                    </a>
+                    <form asp-action="UpdateSiteSettings" method="post" class="m-0">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="key" value="EnableTitles" />
+                        <input type="hidden" name="value" value="@(ViewBag.EnableTitles == "true" ? "false" : "true")" />
+                        <button type="submit" class="btn @(ViewBag.EnableTitles == "true" ? "btn-success" : "btn-outline-danger") btn-sm">
+                            @(ViewBag.EnableTitles == "true" ? "Enabled" : "Disabled")
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        @if (ViewBag.DatabaseFixNeeded == true)
+        {
+            <div class="col-12">
+                <div style="background: rgba(239, 68, 68, 0.1); border: 2px solid #ef4444; border-radius: 10px; padding: 1.5rem;">
+                    <h4 style="margin-top: 0; color: #f87171;">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Database Fix Required
+                    </h4>
+                    <p style="color: var(--text-muted); margin: 0.5rem 0 1rem 0;">If you see "Unknown column ParentCommentId" errors, click this button to update your remote database schema.</p>
+                    <form asp-action="FixCommentsTable" method="post" style="display:inline;">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-tools me-1"></i>Fix Comments Table (Run SQL)
+                        </button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden;">
+                <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color);">
+                    <h5 style="margin: 0; color: var(--text-primary);">
+                        <i class="fas fa-book me-2" style="color: var(--primary-light);"></i>Recent Manga
+                    </h5>
+                </div>
+                <div style="max-height: 300px; overflow-y: auto;">
+                    @if (Model.RecentManga?.Any() == true)
+                    {
+                        @foreach (var manga in Model.RecentManga)
+                        {
+                            <div style="padding: 1rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <p style="margin: 0; font-weight: 600; color: var(--text-primary);">@manga.Title</p>
+                                    <p style="margin: 0.3rem 0 0 0; font-size: 0.85rem; color: var(--text-muted);">@manga.CreatedAt.ToString("MMM dd, yyyy")</p>
+                                </div>
+                                <a href="@Url.Action("EditManga", "Admin", new { id = manga.Id })" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div style="padding: 2rem 1rem; text-align: center; color: var(--text-muted);">
+                            <p>No recent manga</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-4">
+            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden;">
+                <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color);">
+                    <h5 style="margin: 0; color: var(--text-primary);">
+                        <i class="fas fa-list me-2" style="color: var(--accent);"></i>Recent Chapters
+                    </h5>
+                </div>
+                <div style="max-height: 300px; overflow-y: auto;">
+                    @if (Model.RecentChapters?.Any() == true)
+                    {
+                        @foreach (var chapter in Model.RecentChapters)
+                        {
+                            <div style="padding: 1rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <p style="margin: 0; font-weight: 600; color: var(--text-primary);">@(chapter.Manga?.Title ?? "Unknown") - Ch. @chapter.ChapterNumber</p>
+                                    <p style="margin: 0.3rem 0 0 0; font-size: 0.85rem; color: var(--text-muted);">@chapter.CreatedAt.ToString("MMM dd, yyyy")</p>
+                                </div>
+                                <a href="@Url.Action("EditChapter", "Admin", new { id = chapter.Id })" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div style="padding: 2rem 1rem; text-align: center; color: var(--text-muted);">
+                            <p>No recent chapters</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

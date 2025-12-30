@@ -1,0 +1,76 @@
+@model IEnumerable<MangaReader.Models.ChapterPage>
+
+@{
+    ViewData["Title"] = "Manage Pages";
+    var chapter = ViewBag.Chapter;
+    var chapterId = ViewBag.ChapterId;
+}
+
+<div class="container-fluid">
+    <div class="row align-items-center mb-4">
+        <div class="col-md-8">
+            <div class="section-header">
+                <h2>
+                    Pages - @chapter.Manga.Title Ch. @chapter.ChapterNumber
+                </h2>
+                <div class="section-header-divider"></div>
+            </div>
+        </div>
+        <div class="col-md-4" style="text-align: right;">
+            <a asp-action="BulkCreatePages" asp-route-chapterId="@chapterId" class="btn btn-primary">
+                <i class="fas fa-upload me-2"></i>Bulk Upload
+            </a>
+            <a asp-action="CreatePage" asp-route-chapterId="@chapterId" class="btn btn-success">
+                <i class="fas fa-plus me-2"></i>Add Page
+            </a>
+            <a asp-action="ChapterList" asp-route-mangaId="@chapter.MangaId" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Pages Grid -->
+    <div class="row g-3">
+        @if (Model.Any())
+        {
+            @foreach (var page in Model)
+            {
+                <div class="col-md-6 col-lg-4">
+                    <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden;">
+                        <div style="aspect-ratio: 3/4; background: var(--bg-tertiary); overflow: hidden; position: relative;">
+                            <img src="@(page.ImageUrl)" alt="Page @(page.PageNumber)" style="width: 100%; height: 100%; object-fit: cover;">
+                            <div style="position: absolute; top: 0.5rem; right: 0.5rem; background: var(--primary-color); color: white; padding: 0.5rem 0.8rem; border-radius: 6px; font-weight: 600;">
+                                Page @(page.PageNumber)
+                            </div>
+                        </div>
+                        <div style="padding: 1rem;">
+                            <p style="margin: 0 0 0.5rem 0; font-size: 0.9rem; color: var(--text-muted);">
+                                <i class="fas fa-image me-1"></i>@(page.Width) x @(page.Height)
+                            </p>
+                            <p style="margin: 0 0 1rem 0; font-size: 0.85rem; color: var(--text-muted);">
+                                Added: @(page.CreatedAt.ToString("MMM dd, yyyy"))
+                            </p>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <a asp-action="EditPage" asp-route-id="@(page.Id)" class="btn btn-sm btn-primary flex-fill">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a asp-action="DeletePage" asp-route-id="@(page.Id)" class="btn btn-sm btn-danger flex-fill">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="col-12">
+                <div style="padding: 3rem 1rem; text-align: center; color: var(--text-muted); background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px;">
+                    <i class="fas fa-inbox" style="font-size: 2rem; display: block; margin-bottom: 0.5rem;"></i>
+                    <p>No pages found. <a href="@Url.Action("CreatePage", "Admin", new { chapterId })" style="color: var(--primary-light);">Add pages</a></p>
+                </div>
+            </div>
+        }
+    </div>
+</div>

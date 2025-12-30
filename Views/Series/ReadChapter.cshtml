@@ -1,0 +1,1038 @@
+@model MangaReader.Models.Chapter
+
+@{ 
+    ViewData["Title"] = $"Chapter {Model.ChapterNumber} - {Model.Manga?.Title}";
+    var currentUserIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0";
+    var currentUserId = int.TryParse(currentUserIdStr, out var uid) ? uid : 0;
+    var isAdmin = (User.FindFirst("IsAdmin")?.Value == "True") || (User.FindFirst("IsSubAdmin")?.Value == "True");
+}
+
+<style>
+    .reaction-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        color: rgba(255, 255, 255, 0.7) !important;
+        font-size: 1.1rem;
+    }
+    .reaction-btn:hover {
+        transform: scale(1.15);
+        color: #fff !important;
+    }
+    .reaction-btn.text-primary {
+        color: var(--primary-color) !important;
+    }
+    .reaction-btn.text-danger {
+        color: #ff4d4d !important;
+    }
+    .notification-item:hover {
+        background: var(--bg-tertiary);
+    }
+    .notification-item.unread {
+        background: rgba(var(--primary-color-rgb, 108, 117, 125), 0.05);
+    }
+    
+    /* Comment Redesign */
+    .comment-group {
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        background: var(--bg-secondary);
+        margin-bottom: 2rem;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .comment-item {
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+    }
+    .comment-item:not(:last-child) {
+        border-bottom: 1px solid var(--border-color);
+    }
+    .replies-wrapper {
+        background: rgba(0, 0, 0, 0.15);
+        border-top: 1px solid var(--border-color);
+    }
+    .reply-item {
+        padding: 1.25rem 1.5rem 1.25rem 5rem;
+        position: relative;
+        transition: all 0.2s ease;
+    }
+    .reply-item:not(:last-child) {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .reply-item::before {
+        content: '';
+        position: absolute;
+        left: 2.5rem;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--border-color);
+    }
+    .reply-item::after {
+        content: '';
+        position: absolute;
+        left: 2.5rem;
+        top: 2.5rem;
+        width: 1.5rem;
+        height: 2px;
+        background: var(--border-color);
+    }
+    .reply-item:last-child::before {
+        bottom: auto;
+        height: 2.5rem;
+    }
+    .comment-content {
+        word-break: break-word;
+        color: #ffffff !important;
+    }
+    .comment-content p {
+        margin-bottom: 0.5rem;
+    }
+    .comment-content p:last-child {
+        margin-bottom: 0;
+    }
+    .comment-content code {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 0.2rem 0.4rem;
+        border-radius: 4px;
+        color: #e68a00;
+    }
+    .comment-content pre {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        overflow-x: auto;
+    }
+    .comment-content pre code {
+        background: none;
+        padding: 0;
+        color: inherit;
+    }
+    .comment-content blockquote {
+        border-left: 4px solid var(--primary-color);
+        padding-left: 1rem;
+        margin-left: 0;
+        color: rgba(255, 255, 255, 0.7);
+    }
+    .comment-content img {
+        max-width: 100%;
+    }
+    .comment-content ul, .comment-content ol {
+        padding-left: 1.5rem;
+        margin-bottom: 1rem;
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Chapter Header -->
+    <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.5rem; margin-bottom: 2rem;">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 style="margin: 0; font-weight: 700;">
+                    <a href="@Url.Action("Detail", "Series", new { id = Model.Manga?.Id ?? 0 })" style="color: var(--primary-light); text-decoration: none;">
+                        @Model.Manga?.Title
+                    </a>
+                </h2>
+                <p style="margin: 0.5rem 0 0 0; color: var(--text-muted);">
+                    Chapter @Model.ChapterNumber @(string.IsNullOrEmpty(Model.Title) ? "" : "- " + Model.Title)
+                </p>
+                <p style="margin: 0.3rem 0 0 0; font-size: 0.9rem; color: var(--text-muted);">
+                    <i class="fas fa-calendar me-1"></i>@Model.ReleasedDate.ToString("MMM dd, yyyy")
+                    <i class="fas fa-eye ms-3 me-1"></i>@Model.ViewCount views
+                </p>
+            </div>
+            <div class="col-md-4" style="text-align: right;">
+                <a href="@Url.Action("Detail", "Series", new { id = Model.Manga?.Id ?? 0 })" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Series
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chapter Navigation -->
+    <div class="row mb-3" style="align-items: center;">
+        <div class="col-md-4">
+            @if (Model.Manga?.Chapters != null && Model.Manga.Chapters.Any(c => c.ChapterNumber < Model.ChapterNumber))
+            {
+                var prevChapter = Model.Manga.Chapters.Where(c => c.ChapterNumber < Model.ChapterNumber).OrderByDescending(c => c.ChapterNumber).First();
+                <a href="@Url.Action("ReadChapter", "Series", new { id = prevChapter.Id })" class="btn btn-primary w-100">
+                    <i class="fas fa-arrow-left me-2"></i>Previous Chapter
+                </a>
+            }
+        </div>
+        <div class="col-md-4" style="text-align: center;">
+            <select class="form-select" style="background: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);" onchange="if(this.value) window.location.href=this.value">
+                <option value="" disabled selected>Select Chapter...</option>
+                @foreach (var ch in Model.Manga?.Chapters?.OrderByDescending(c => c.ChapterNumber) ?? Enumerable.Empty<MangaReader.Models.Chapter>())
+                {
+                    <option value="@Url.Action("ReadChapter", "Series", new { id = ch.Id })" selected="@(ch.Id == Model.Id ? "selected" : "")">
+                        Chapter @ch.ChapterNumber @(string.IsNullOrEmpty(ch.Title) ? "" : "- " + ch.Title)
+                    </option>
+                }
+            </select>
+        </div>
+        <div class="col-md-4" style="text-align: right;">
+            @if (Model.Manga?.Chapters != null && Model.Manga.Chapters.Any(c => c.ChapterNumber > Model.ChapterNumber))
+            {
+                var nextChapter = Model.Manga.Chapters.Where(c => c.ChapterNumber > Model.ChapterNumber).OrderBy(c => c.ChapterNumber).First();
+                <a href="@Url.Action("ReadChapter", "Series", new { id = nextChapter.Id })" class="btn btn-primary w-100">
+                    Next Chapter <i class="fas fa-arrow-right ms-2"></i>
+                </a>
+            }
+        </div>
+    </div>
+
+    <!-- Reader -->
+    <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem;">
+        @if (Model.Pages?.Any() == true)
+        {
+            <div class="reader-toolbar" style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; padding: 0.5rem 0.5rem 1rem 0.5rem;">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <button class="btn btn-secondary btn-sm" id="settingsBtn" title="Reader Settings"><i class="fas fa-cog"></i></button>
+                    <button class="btn btn-secondary btn-sm" id="zoomOutBtn"><i class="fas fa-minus"></i></button>
+                    <span id="zoomLabel" style="color: var(--text-muted); font-size:0.9rem; min-width:48px; text-align:center;">100%</span>
+                    <button class="btn btn-secondary btn-sm" id="zoomInBtn"><i class="fas fa-plus"></i></button>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <select id="modeSelect" class="form-select form-select-sm" style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary); min-width: 160px;">
+                        <option value="vertical">Vertical</option>
+                        <option value="single">Single Page</option>
+                        <option value="double">Double Page</option>
+                    </select>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <button class="btn btn-primary btn-sm" id="prevPageBtn"><i class="fas fa-arrow-left"></i></button>
+                    <button class="btn btn-primary btn-sm" id="nextPageBtn"><i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <div id="readerContainer" tabindex="0" style="--zoom:1; display:flex; flex-direction:column; align-items:center; gap:1rem; padding: 0 0.5rem; text-align:center; outline:none;"></div>
+            
+            <!-- Reader Settings Panel -->
+            <div id="settingsPanel" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; z-index: 2000; box-shadow: 0 10px 40px rgba(0,0,0,0.8); min-width: 300px;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0 text-white"><i class="fas fa-cog me-2"></i>Reader Settings</h5>
+                    <button class="btn-close btn-close-white" onclick="closeSettings()"></button>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-white-50">Vertical Spacing</label>
+                    <input type="range" class="form-range" id="spacingRange" min="0" max="100" step="5" value="16">
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted">None</small>
+                        <small id="spacingValue" class="text-primary">16px</small>
+                        <small class="text-muted">Large</small>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-white-50">Background Color</label>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-light flex-fill" onclick="setReaderBg('#1a1a1a')">Dark</button>
+                        <button class="btn btn-sm btn-outline-light flex-fill" onclick="setReaderBg('#000000')">Black</button>
+                        <button class="btn btn-sm btn-outline-light flex-fill" onclick="setReaderBg('#ffffff')">White</button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-white-50">Image Brightness</label>
+                    <input type="range" class="form-range" id="brightnessRange" min="20" max="150" step="5" value="100">
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted">Dim</small>
+                        <small id="brightnessValue" class="text-primary">100%</small>
+                        <small class="text-muted">Bright</small>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-white-50">Reading Direction</label>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-light flex-fill" id="dirLTRBtn" onclick="setDirection('ltr')">LTR</button>
+                        <button class="btn btn-sm btn-outline-light flex-fill" id="dirRTLBtn" onclick="setDirection('rtl')">RTL</button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-white-50">Fit Mode</label>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-light flex-fill" id="fitWidthBtn" onclick="setFitMode('width')">Width</button>
+                        <button class="btn btn-sm btn-outline-light flex-fill" id="fitHeightBtn" onclick="setFitMode('height')">Height</button>
+                    </div>
+                </div>
+                <div class="d-grid mt-4">
+                    <button class="btn btn-primary" onclick="closeSettings()">Close</button>
+                </div>
+            </div>
+            <div id="settingsOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1999;" onclick="closeSettings()"></div>
+        }
+        else
+        {
+            <div style="padding: 3rem 1rem; text-align:center;">
+                <i class="fas fa-images" style="font-size: 3rem; color: var(--text-muted); margin-bottom: 1rem; display: block;"></i>
+                <p style="color: var(--text-muted);">No pages available for this chapter yet.</p>
+            </div>
+        }
+    </div>
+
+    @{
+        var defaultAvatar = "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y";
+    }
+
+    <!-- Comments -->
+    <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 2rem; margin-top: 2rem;">
+        <div class="row mb-3">
+            <div class="col-12">
+                <h4 style="margin: 0;">Comments (@(Model.Comments?.Count ?? 0))</h4>
+                <div class="section-header-divider" style="margin-top: 0.5rem;"></div>
+            </div>
+        </div>
+
+        @if ((User.Identity?.IsAuthenticated ?? false))
+        {
+            <div class="mb-3">
+                <div id="emojiPicker" style="display:none; position:absolute; background: var(--bg-tertiary); border: 1px solid var(--border-color); padding: 0.5rem; border-radius: 8px; z-index: 1000; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
+                    <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem;">
+                        <span onclick="addEmoji(':happy:')" style="cursor:pointer; font-size: 1.5rem;">😊</span>
+                        <span onclick="addEmoji(':heart:')" style="cursor:pointer; font-size: 1.5rem;">❤️</span>
+                        <span onclick="addEmoji(':fire:')" style="cursor:pointer; font-size: 1.5rem;">🔥</span>
+                        <span onclick="addEmoji(':shock:')" style="cursor:pointer; font-size: 1.5rem;">😲</span>
+                        <span onclick="addEmoji(':cry:')" style="cursor:pointer; font-size: 1.5rem;">😢</span>
+                        <span onclick="addEmoji(':cool:')" style="cursor:pointer; font-size: 1.5rem;">😎</span>
+                        <span onclick="addEmoji(':love:')" style="cursor:pointer; font-size: 1.5rem;">😍</span>
+                        <span onclick="addEmoji(':angry:')" style="cursor:pointer; font-size: 1.5rem;">😠</span>
+                    </div>
+                </div>
+                <div style="position:relative;">
+                    <textarea id="commentContent" class="form-control" rows="3" placeholder="Write a comment..." style="background: var(--bg-tertiary); border-color: var(--border-color); color: #ffffff;"></textarea>
+                    <button class="btn btn-sm btn-link" onclick="toggleEmojiPicker(event)" style="position:absolute; bottom: 5px; right: 5px; color: var(--text-muted); text-decoration: none;">
+                        <i class="far fa-smile"></i>
+                    </button>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <small class="text-muted"><i class="fab fa-markdown me-1"></i>Markdown supported</small>
+                    <button id="postCommentBtn" class="btn btn-primary">Post Comment</button>
+                </div>
+                <div id="commentError" class="text-danger mt-2" style="display:none;"></div>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info" style="background: var(--bg-tertiary); color: var(--text-primary); border-color: var(--border-color);">
+                Please <a href="@Url.Action("Login", "Auth")" class="alert-link">log in</a> to post comments.
+            </div>
+        }
+
+        <div id="commentsList" class="mt-4">
+            @{
+                var allComments = Model.Comments?.ToList() ?? new List<ChapterComment>();
+                var rootComments = allComments.Where(c => c.ParentCommentId == null).OrderByDescending(cc => cc.CreatedAt).ToList();
+            }
+
+            @if (rootComments.Any())
+            {
+                @foreach (var c in rootComments)
+                {
+                    <div id="comment-group-@c.Id" class="comment-group">
+                        <div id="comment-@c.Id" class="comment-item">
+                            <div style="display: flex; gap: 1.5rem; position: relative;">
+                                <!-- Left Side: Profile Column -->
+                                <div style="width: 80px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 0.6rem;">
+                                    <a href="@Url.Action("PublicProfile", "Auth", new { id = c.UserId })" class="text-decoration-none">
+                                        <div class="position-relative d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                                            <img src="@(string.IsNullOrWhiteSpace(c.User?.AvatarUrl) ? $"https://ui-avatars.com/api/?name={c.User?.Username}&background=random&color=fff" : c.User.AvatarUrl)" alt="Avatar" onerror="this.src='@defaultAvatar'"
+                                                 style="width:100%; height:100%; border-radius:50%; object-fit:cover; border:2px solid var(--primary-color); position: relative; z-index: 1;" />
+                                            @{
+                                                var equippedDec = c.User?.EquippedDecoration;
+                                                var equippedTitle = c.User?.EquippedTitle;
+                                            }
+                                            @if (equippedDec != null && ViewBag.EnableDecorations == "true")
+                                            {
+                                                <img src="@equippedDec!.ImageUrl" alt="Decoration" 
+                                                     style="position: absolute; top: 50%; left: 50%; width: 125%; height: 125%; transform: translate(-50%, -50%); pointer-events: none; z-index: 2;" />
+                                            }
+                                        </div>
+                                    </a>
+                                    @if (equippedTitle != null && ViewBag.EnableTitles == "true")
+                                    {
+                                        <span class="badge" style="background: rgba(0,0,0,0.4); border: 1px solid @(equippedTitle!.Color ?? "transparent"); color: @(equippedTitle!.Color ?? "inherit"); font-weight: bold; font-size: 0.65rem; padding: 2px 4px; width: 100%; white-space: normal; overflow: visible; text-align: center; line-height: 1.2;" title="@equippedTitle!.Name">
+                                            @equippedTitle!.Name
+                                        </span>
+                                    }
+                                </div>
+
+                                <!-- Right Side: Content Column -->
+                                <div style="flex: 1; display: flex; flex-direction: column;">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                                        <div>
+                                            <a href="@Url.Action("PublicProfile", "Auth", new { id = c.UserId })" class="text-decoration-none">
+                                                <strong style="color: var(--primary-light); font-size: 1.05rem;">@(c.User?.Username ?? "User")</strong>
+                                            </a>
+                                            @if (c.User != null)
+                                            {
+                                                <span class="badge" style="background: var(--primary-color); font-size: 0.7rem; padding: 1px 6px; margin-left: 6px; vertical-align: middle;">Lv. @c.User.Level</span>
+                                            }
+                                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+                                                <i class="far fa-clock me-1"></i>@c.CreatedAt.ToString("MMM dd, yyyy HH:mm")
+                                            </div>
+                                        </div>
+                                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                            @if (User.Identity?.IsAuthenticated ?? false)
+                                            {
+                                                <button class="btn btn-sm btn-link text-primary p-0 text-decoration-none" onclick="showReplyForm(@c.Id)">
+                                                    <i class="fas fa-reply me-1"></i>Reply
+                                                </button>
+                                                @if (currentUserId != 0 && currentUserId == c.UserId)
+                                                {
+                                                    <button class="btn btn-sm btn-link text-info p-0 text-decoration-none ms-2" onclick="showEditForm(@c.Id)">
+                                                        <i class="fas fa-edit me-1"></i>Edit
+                                                    </button>
+                                                }
+                                            }
+                                            @if (isAdmin || (currentUserId != 0 && currentUserId == c.UserId))
+                                            {
+                                                <button class="btn btn-sm btn-link text-danger p-0 text-decoration-none ms-2" onclick="deleteComment(@c.Id)">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    </div>
+
+                                    <div id="commentDisplay-@c.Id" class="comment-content text-white" style="font-size: 1rem; line-height: 1.5;">@c.Content</div>
+                                    
+                                    <div id="editForm-@c.Id" class="mt-3" style="display:none;">
+                                        <textarea id="editContent-@c.Id" class="form-control form-control-sm mb-2" rows="3" style="background: var(--bg-tertiary); border-color: var(--border-color); color: #ffffff;">@c.Content</textarea>
+                                        <div class="d-flex justify-content-end gap-2">
+                                            <button class="btn btn-sm btn-secondary" onclick="showEditForm(@c.Id, false)">Cancel</button>
+                                            <button class="btn btn-sm btn-primary" onclick="updateComment(@c.Id)">Save Changes</button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div id="replyForm-@c.Id" class="mt-3" style="display:none;">
+                                        <textarea id="replyContent-@c.Id" class="form-control form-control-sm mb-2" rows="2" placeholder="Write a reply..." style="background: var(--bg-tertiary); border-color: var(--border-color); color: #ffffff;"></textarea>
+                                        <div class="d-flex justify-content-end gap-2">
+                                            <button class="btn btn-sm btn-secondary" onclick="hideReplyForm(@c.Id)">Cancel</button>
+                                            <button class="btn btn-sm btn-primary" onclick="postReply(@c.Id)">Post Reply</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        @{
+                            var replies = allComments.Where(cc => cc.ParentCommentId == c.Id).OrderBy(cc => cc.CreatedAt).ToList();
+                        }
+                        @if (replies.Any())
+                        {
+                            <div class="replies-wrapper">
+                                @foreach (var r in replies)
+                                {
+                                    <div id="comment-@r.Id" class="reply-item">
+                                        <div style="display: flex; gap: 1rem;">
+                                            <!-- Mini Avatar for Reply -->
+                                            <div style="width: 40px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 0.4rem;">
+                                                <a href="@Url.Action("PublicProfile", "Auth", new { id = r.UserId })" class="text-decoration-none">
+                                                    <div class="position-relative d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                                        <img src="@(string.IsNullOrWhiteSpace(r.User?.AvatarUrl) ? $"https://ui-avatars.com/api/?name={r.User?.Username}&background=random&color=fff" : r.User.AvatarUrl)" alt="Avatar" onerror="this.src='@defaultAvatar'"
+                                                             style="width:100%; height:100%; border-radius:50%; object-fit:cover; border:1.5px solid var(--primary-color); position: relative; z-index: 1;" />
+                                                        @{
+                                                            var rEquippedDec = r.User?.EquippedDecoration;
+                                                        }
+                                                        @if (rEquippedDec != null && ViewBag.EnableDecorations == "true")
+                                                        {
+                                                            <img src="@rEquippedDec!.ImageUrl" alt="Decoration" 
+                                                                 style="position: absolute; top: 50%; left: 50%; width: 130%; height: 130%; transform: translate(-50%, -50%); pointer-events: none; z-index: 2;" />
+                                                        }
+                                                    </div>
+                                                </a>
+                                            </div>
+
+                                            <div style="flex: 1;">
+                                                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                                        <div>
+                                                            <a href="@Url.Action("PublicProfile", "Auth", new { id = r.UserId })" class="text-decoration-none">
+                                                                <strong style="color: var(--primary-light); font-size: 0.9rem;">@(r.User?.Username ?? "User")</strong>
+                                                            </a>
+                                                            @if (r.RepliedToUserId.HasValue)
+                                                            {
+                                                                <span class="mx-1" style="color: var(--text-muted); font-size: 0.8rem; opacity: 0.7;">
+                                                                    <i class="fas fa-arrow-right" style="font-size: 0.7rem;"></i>
+                                                                </span>
+                                                                <a href="@Url.Action("PublicProfile", "Auth", new { id = r.RepliedToUserId })" class="text-decoration-none">
+                                                                    <span style="color: var(--text-muted); font-size: 0.85rem;">@(r.RepliedToUser?.Username ?? "User")</span>
+                                                                </a>
+                                                            }
+                                                            @if (r.User != null)
+                                                            {
+                                                                <span class="badge" style="background: var(--primary-color); font-size: 0.65rem; padding: 1px 5px; margin-left: 4px; vertical-align: middle;">Lv. @r.User.Level</span>
+                                                            }
+                                                            @if (r.User?.EquippedTitle != null && ViewBag.EnableTitles == "true")
+                                                            {
+                                                                <span class="badge ms-1" style="background: rgba(0,0,0,0.4); border: 1px solid @(r.User.EquippedTitle.Color ?? "transparent"); color: @(r.User.EquippedTitle.Color ?? "inherit"); font-weight: bold; font-size: 0.65rem; padding: 1px 4px; vertical-align: middle;">
+                                                                    @r.User.EquippedTitle.Name
+                                                                </span>
+                                                            }
+                                                            <span style="font-size: 0.7rem; color: var(--text-muted); margin-left: 8px;">
+                                                                @r.CreatedAt.ToString("MMM dd, HH:mm")
+                                                            </span>
+                                                        </div>
+                                                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                                        @if (User.Identity?.IsAuthenticated ?? false)
+                                                        {
+                                                            <button class="btn btn-sm btn-link text-primary p-0 text-decoration-none" style="font-size: 0.8rem;" onclick="showReplyForm(@r.Id)">
+                                                                <i class="fas fa-reply me-1"></i>Reply
+                                                            </button>
+                                                            @if (currentUserId != 0 && currentUserId == r.UserId)
+                                                            {
+                                                                <button class="btn btn-sm btn-link text-info p-0 text-decoration-none ms-1" style="font-size: 0.8rem;" onclick="showEditForm(@r.Id)">
+                                                                    <i class="fas fa-edit me-1"></i>Edit
+                                                                </button>
+                                                            }
+                                                        }
+                                                        @if (isAdmin || (currentUserId != 0 && currentUserId == r.UserId))
+                                                        {
+                                                            <button class="btn btn-sm btn-link text-danger p-0 text-decoration-none ms-1" onclick="deleteComment(@r.Id)">
+                                                                <i class="fas fa-trash" style="font-size: 0.8rem;"></i>
+                                                            </button>
+                                                        }
+                                                    </div>
+                                                </div>
+                                                <div id="commentDisplay-@r.Id" class="comment-content text-white mt-1" style="font-size: 0.9rem; line-height: 1.4;">@r.Content</div>
+                                                
+                                                <div id="editForm-@r.Id" class="mt-2" style="display:none;">
+                                                    <textarea id="editContent-@r.Id" class="form-control form-control-sm mb-2" rows="2" style="background: var(--bg-tertiary); border-color: var(--border-color); color: #ffffff;">@r.Content</textarea>
+                                                    <div class="d-flex justify-content-end gap-2">
+                                                        <button class="btn btn-sm btn-secondary" style="font-size: 0.75rem;" onclick="showEditForm(@r.Id, false)">Cancel</button>
+                                                        <button class="btn btn-sm btn-primary" style="font-size: 0.75rem;" onclick="updateComment(@r.Id)">Save Changes</button>
+                                                    </div>
+                                                </div>
+
+                                                <div id="replyForm-@r.Id" class="mt-2" style="display:none;">
+                                                    <textarea id="replyContent-@r.Id" class="form-control form-control-sm mb-2" rows="2" placeholder="Reply to @(r.User?.Username)..." style="background: var(--bg-tertiary); border-color: var(--border-color); color: #ffffff;"></textarea>
+                                                    <div class="d-flex justify-content-end gap-2">
+                                                        <button class="btn btn-sm btn-secondary" style="font-size: 0.75rem;" onclick="hideReplyForm(@r.Id)">Cancel</button>
+                                                        <button class="btn btn-sm btn-primary" style="font-size: 0.75rem;" onclick="postReply(@r.Id)">Post Reply</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            }
+            else
+            {
+                <div style="padding: 3rem 1rem; text-align:center; background: var(--bg-secondary); border-radius: 12px; border: 1px dashed var(--border-color);">
+                    <i class="far fa-comments" style="font-size: 3rem; color: var(--text-muted); margin-bottom: 1rem; display: block;"></i>
+                    <p style="color: var(--text-muted); margin: 0;">No comments yet. Be the first to share your thoughts!</p>
+                </div>
+            }
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+    <script>
+        const pages = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Pages?.OrderBy(p => p.PageNumber).Select(p => new { url = p.ImageUrl, num = p.PageNumber }) ?? Enumerable.Empty<object>()));
+        let mode = localStorage.getItem('readerMode') || 'vertical';
+        let zoom = parseFloat(localStorage.getItem('readerZoom') || '1');
+        let spacing = parseInt(localStorage.getItem('readerSpacing') || '16');
+        let brightness = parseInt(localStorage.getItem('readerBrightness') || '100');
+        let readerBg = localStorage.getItem('readerBg') || 'var(--bg-secondary)';
+        let direction = localStorage.getItem('readerDirection') || 'ltr';
+        let fitMode = localStorage.getItem('readerFitMode') || 'width';
+        let index = 0;
+
+        function render() {
+            const container = document.getElementById('readerContainer');
+            const zoomLabel = document.getElementById('zoomLabel');
+            if (!container) return;
+            container.innerHTML = '';
+            
+            // Apply settings
+            container.style.background = readerBg;
+            container.style.gap = spacing + 'px';
+            container.style.filter = `brightness(${brightness}%)`;
+            
+            // Base styles for container
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column';
+            container.style.alignItems = 'center';
+            container.style.width = '100%';
+            container.style.padding = '1rem 0';
+            
+            if (zoomLabel) zoomLabel.textContent = Math.round(zoom * 100) + '%';
+
+            if (mode === 'vertical') {
+                document.getElementById('prevPageBtn').disabled = true;
+                document.getElementById('nextPageBtn').disabled = true;
+                pages.forEach(p => {
+                    const img = document.createElement('img');
+                    img.src = p.url;
+                    img.alt = 'Page ' + p.num;
+                    img.style.borderRadius = spacing > 0 ? '8px' : '0';
+                    if (spacing > 0) img.style.boxShadow = '0 10px 30px rgba(0,0,0,0.3)';
+                    
+                    if (fitMode === 'height') {
+                        img.style.height = (zoom * 90) + 'vh';
+                        img.style.width = 'auto';
+                    } else {
+                        img.style.width = (zoom * 100) + '%';
+                        img.style.height = 'auto';
+                    }
+                    
+                    img.style.maxWidth = '100%';
+                    img.style.transition = 'width 0.2s ease-in-out, height 0.2s ease-in-out';
+                    img.style.willChange = 'width, height';
+                    container.appendChild(img);
+                });
+                return;
+            }
+
+            document.getElementById('prevPageBtn').disabled = (index <= 0);
+            document.getElementById('nextPageBtn').disabled = (mode === 'single' ? index >= pages.length - 1 : index >= pages.length - 2);
+
+            if (mode === 'single') {
+                const p = pages[index];
+                if (!p) return;
+                const img = document.createElement('img');
+                img.src = p.url;
+                img.alt = 'Page ' + p.num;
+                img.style.borderRadius = '8px';
+                img.style.boxShadow = '0 10px 30px rgba(0,0,0,0.3)';
+                
+                if (fitMode === 'height') {
+                    img.style.height = (zoom * 90) + 'vh';
+                    img.style.width = 'auto';
+                } else {
+                    img.style.width = (zoom * 100) + '%';
+                    img.style.height = 'auto';
+                }
+                
+                img.style.maxWidth = '100%';
+                img.style.transition = 'width 0.2s ease-in-out, height 0.2s ease-in-out';
+                img.style.willChange = 'width, height';
+                container.appendChild(img);
+            } else if (mode === 'double') {
+                container.style.flexDirection = direction === 'rtl' ? 'row-reverse' : 'row';
+                container.style.justifyContent = 'center';
+                container.style.flexWrap = 'nowrap';
+                
+                const p1 = pages[index];
+                const p2 = pages[index + 1];
+                [p1, p2].forEach((p, i) => {
+                    if (!p) return;
+                    const img = document.createElement('img');
+                    img.src = p.url;
+                    img.alt = 'Page ' + p.num;
+                    img.style.borderRadius = '8px';
+                    img.style.boxShadow = '0 10px 30px rgba(0,0,0,0.3)';
+                    
+                    if (fitMode === 'height') {
+                        img.style.height = (zoom * 90) + 'vh';
+                        img.style.width = 'auto';
+                    } else {
+                        img.style.width = (zoom * 50) + '%';
+                        img.style.height = 'auto';
+                    }
+                    
+                    img.style.maxWidth = '50%';
+                    img.style.transition = 'width 0.2s ease-in-out, height 0.2s ease-in-out';
+                    img.style.willChange = 'width, height';
+                    container.appendChild(img);
+                });
+            }
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsPanel').style.display = 'none';
+            document.getElementById('settingsOverlay').style.display = 'none';
+            // Return focus to the reader container to restore keyboard scrolling
+            document.getElementById('readerContainer').focus();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const modeSelect = document.getElementById('modeSelect');
+            const zoomInBtn = document.getElementById('zoomInBtn');
+            const zoomOutBtn = document.getElementById('zoomOutBtn');
+            const prevBtn = document.getElementById('prevPageBtn');
+            const nextBtn = document.getElementById('nextPageBtn');
+
+            modeSelect.value = mode;
+            render();
+
+            modeSelect.addEventListener('change', () => {
+                mode = modeSelect.value;
+                localStorage.setItem('readerMode', mode);
+                index = 0;
+                render();
+            });
+
+            zoomInBtn.addEventListener('click', () => {
+                zoom = Math.min(2.5, zoom + 0.1);
+                localStorage.setItem('readerZoom', String(zoom));
+                render();
+            });
+            zoomOutBtn.addEventListener('click', () => {
+                zoom = Math.max(0.5, zoom - 0.1);
+                localStorage.setItem('readerZoom', String(zoom));
+                render();
+            });
+
+            prevBtn.addEventListener('click', () => {
+                if (mode === 'single') {
+                    index = Math.max(0, index - 1);
+                } else if (mode === 'double') {
+                    index = Math.max(0, index - 2);
+                }
+                render();
+            });
+            nextBtn.addEventListener('click', () => {
+                if (mode === 'single') {
+                    index = Math.min(pages.length - 1, index + 1);
+                } else if (mode === 'double') {
+                    index = Math.min(pages.length - 2, index + 2);
+                }
+                render();
+            });
+
+            // Settings Listeners
+            const settingsBtn = document.getElementById('settingsBtn');
+            const settingsPanel = document.getElementById('settingsPanel');
+            const settingsOverlay = document.getElementById('settingsOverlay');
+            const spacingRange = document.getElementById('spacingRange');
+            const brightnessRange = document.getElementById('brightnessRange');
+
+            settingsBtn.addEventListener('click', () => {
+                settingsPanel.style.display = 'block';
+                settingsOverlay.style.display = 'block';
+            });
+
+            spacingRange.value = spacing;
+            document.getElementById('spacingValue').textContent = spacing + 'px';
+            spacingRange.addEventListener('input', (e) => {
+                spacing = parseInt(e.target.value);
+                document.getElementById('spacingValue').textContent = spacing + 'px';
+                localStorage.setItem('readerSpacing', spacing);
+                render();
+            });
+
+            brightnessRange.value = brightness;
+            document.getElementById('brightnessValue').textContent = brightness + '%';
+            brightnessRange.addEventListener('input', (e) => {
+                brightness = parseInt(e.target.value);
+                document.getElementById('brightnessValue').textContent = brightness + '%';
+                localStorage.setItem('readerBrightness', brightness);
+                render();
+            });
+
+            window.setReaderBg = (bg) => {
+                readerBg = bg;
+                localStorage.setItem('readerBg', bg);
+                render();
+            };
+
+            window.setDirection = (dir) => {
+                direction = dir;
+                localStorage.setItem('readerDirection', dir);
+                updateSettingsButtons();
+                render();
+            };
+
+            window.setFitMode = (mode) => {
+                fitMode = mode;
+                localStorage.setItem('readerFitMode', mode);
+                updateSettingsButtons();
+                render();
+            };
+
+            function updateSettingsButtons() {
+                // Direction buttons
+                document.getElementById('dirLTRBtn').classList.toggle('btn-primary', direction === 'ltr');
+                document.getElementById('dirLTRBtn').classList.toggle('btn-outline-light', direction !== 'ltr');
+                document.getElementById('dirRTLBtn').classList.toggle('btn-primary', direction === 'rtl');
+                document.getElementById('dirRTLBtn').classList.toggle('btn-outline-light', direction !== 'rtl');
+
+                // Fit mode buttons
+                document.getElementById('fitWidthBtn').classList.toggle('btn-primary', fitMode === 'width');
+                document.getElementById('fitWidthBtn').classList.toggle('btn-outline-light', fitMode !== 'width');
+                document.getElementById('fitHeightBtn').classList.toggle('btn-primary', fitMode === 'height');
+                document.getElementById('fitHeightBtn').classList.toggle('btn-outline-light', fitMode !== 'height');
+            }
+
+            updateSettingsButtons();
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') prevBtn.click();
+                if (e.key === 'ArrowRight') nextBtn.click();
+                if (e.key === '+') zoomInBtn.click();
+                if (e.key === '-') zoomOutBtn.click();
+            });
+
+            document.getElementById('readerContainer')?.addEventListener('click', () => {
+                if (mode !== 'vertical') nextBtn.click();
+            });
+        });
+        document.addEventListener('DOMContentLoaded', function() {
+            const postBtn = document.getElementById('postCommentBtn');
+            if (postBtn) {
+                postBtn.addEventListener('click', async function() {
+                    const contentEl = document.getElementById('commentContent');
+                    const errorEl = document.getElementById('commentError');
+                    const content = (contentEl?.value || '').trim();
+                    errorEl.style.display = 'none';
+                    
+                    if (!content) {
+                        errorEl.textContent = 'Comment cannot be empty.';
+                        errorEl.style.display = 'block';
+                        return;
+                    }
+                    if (content.length > 1000) {
+                        errorEl.textContent = 'Comment exceeds 1000 characters.';
+                        errorEl.style.display = 'block';
+                        return;
+                    }
+
+                    postBtn.disabled = true;
+                    try {
+                        const resp = await fetch('@Url.Action("AddComment", "Series")', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ chapterId: @Model.Id, content: content })
+                        });
+                        const data = await resp.json();
+                        if (!data.success) {
+                            errorEl.textContent = data.message || 'Failed to post comment.';
+                            errorEl.style.display = 'block';
+                        } else {
+                            // Simple UX: reload to show the new comment
+                            location.reload();
+                        }
+                    } catch (e) {
+                        errorEl.textContent = 'An error occurred.';
+                        errorEl.style.display = 'block';
+                    } finally {
+                        postBtn.disabled = false;
+                    }
+                });
+            }
+        });
+
+        async function deleteComment(commentId) {
+            try {
+                const resp = await fetch('@Url.Action("DeleteComment", "Series")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ commentId })
+                });
+                const data = await resp.json();
+                if (!data.success) {
+                    alert(data.message || 'Failed to delete comment.');
+                    return;
+                }
+                const el = document.getElementById('comment-' + commentId);
+                if (el) { el.remove(); }
+            } catch (e) {
+                alert('An error occurred while deleting the comment.');
+            }
+        }
+
+        async function reactToComment(commentId, isLike) {
+            try {
+                const resp = await fetch('@Url.Action("ReactToComment", "Series")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ commentId, isLike })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    const likeBtn = document.getElementById(`like-btn-${commentId}`);
+                    const dislikeBtn = document.getElementById(`dislike-btn-${commentId}`);
+                    const likeCount = document.getElementById(`like-count-${commentId}`);
+                    const dislikeCount = document.getElementById(`dislike-count-${commentId}`);
+
+                    if (likeCount) likeCount.textContent = data.likes;
+                    if (dislikeCount) dislikeCount.textContent = data.dislikes;
+
+                    // Toggle colors
+                    if (isLike) {
+                        likeBtn.classList.toggle('text-primary');
+                        // If we liked, and dislike was active, it gets removed by server logic
+                        if (dislikeBtn.classList.contains('text-danger')) {
+                            dislikeBtn.classList.remove('text-danger');
+                        }
+                    } else {
+                        dislikeBtn.classList.toggle('text-danger');
+                        if (likeBtn.classList.contains('text-primary')) {
+                            likeBtn.classList.remove('text-primary');
+                        }
+                    }
+                } else {
+                    alert(data.message || 'Failed to react to comment.');
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function showReplyForm(commentId, show = true) {
+            const form = document.getElementById(`replyForm-${commentId}`);
+            if (form) form.style.display = show ? 'block' : 'none';
+        }
+
+        function showEditForm(commentId, show = true) {
+            const display = document.getElementById(`commentDisplay-${commentId}`);
+            const form = document.getElementById(`editForm-${commentId}`);
+            if (display) display.style.display = show ? 'none' : 'block';
+            if (form) form.style.display = show ? 'block' : 'none';
+        }
+
+        async function updateComment(commentId) {
+            const contentEl = document.getElementById(`editContent-${commentId}`);
+            const content = (contentEl?.value || '').trim();
+            if (!content) return;
+
+            try {
+                const resp = await fetch('@Url.Action("UpdateComment", "Series")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ commentId, content })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message || 'Failed to update comment.');
+                }
+            } catch (e) {
+                alert('An error occurred.');
+            }
+        }
+
+        async function postReply(parentId) {
+            const contentEl = document.getElementById(`replyContent-${parentId}`);
+            const content = (contentEl?.value || '').trim();
+            if (!content) return;
+
+            try {
+                const resp = await fetch('@Url.Action("AddComment", "Series")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chapterId: @Model.Id, content: content, parentId: parentId })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message || 'Failed to post reply.');
+                }
+            } catch (e) {
+                alert('An error occurred.');
+            }
+        }
+
+        function toggleEmojiPicker(e) {
+            e.preventDefault();
+            const picker = document.getElementById('emojiPicker');
+            const rect = e.target.getBoundingClientRect();
+            picker.style.top = (rect.top + window.scrollY - 150) + 'px';
+            picker.style.left = (rect.left + window.scrollX - 100) + 'px';
+            picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function addEmoji(code) {
+            const contentEl = document.getElementById('commentContent');
+            contentEl.value += ' ' + code + ' ';
+            document.getElementById('emojiPicker').style.display = 'none';
+            contentEl.focus();
+        }
+
+        // Fullscreen focus handling
+        document.addEventListener('fullscreenchange', () => {
+            if (document.fullscreenElement) {
+                const container = document.getElementById('readerContainer');
+                if (container) {
+                    container.focus();
+                    // Optional: auto-scroll to the current page in single/double mode
+                }
+            }
+        });
+
+        const customEmojis = @Html.Raw(ViewBag.EmojisJson ?? "[]");
+        const emojiMap = {};
+        customEmojis.forEach(e => {
+            emojiMap[e.code] = { url: e.url, size: e.size };
+        });
+
+        function parseEmojis(text) {
+            const standardEmojis = {
+                ':happy:': '😊',
+                ':heart:': '❤️',
+                ':fire:': '🔥',
+                ':shock:': '😲',
+                ':cry:': '😢',
+                ':cool:': '😎',
+                ':love:': '😍',
+                ':angry:': '😠'
+            };
+
+            return text.replace(/:[a-z0-9_]+:/g, (match) => {
+                const customEmoji = emojiMap[match];
+                if (customEmoji) {
+                    return `<img src="${customEmoji.url}" alt="${match}" style="width: ${customEmoji.size}px; height: ${customEmoji.size}px; vertical-align: middle; margin: 0 2px;" />`;
+                }
+                return standardEmojis[match] || match;
+            });
+        }
+
+        // Parse emojis and markdown on load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Configure marked to be safer
+            marked.setOptions({
+                headerIds: false,
+                mangle: false,
+                breaks: true, // Enable line breaks
+                sanitize: false // We use DOMPurify instead
+            });
+
+            document.querySelectorAll('.comment-content').forEach(el => {
+                const rawContent = el.textContent;
+                // 1. Parse Markdown
+                let html = marked.parse(rawContent);
+                // 2. Purify HTML
+                html = DOMPurify.sanitize(html);
+                // 3. Parse Emojis (on the purified HTML)
+                el.innerHTML = parseEmojis(html);
+            });
+        });
+    </script>
+
+    <!-- Chapter Navigation (Bottom) -->
+    <div class="row mt-4">
+        <div class="col-md-4">
+            @if (Model.Manga?.Chapters?.Any(c => c.ChapterNumber < Model.ChapterNumber) ?? false)
+            {
+                var prevChapter = Model.Manga!.Chapters!.Where(c => c.ChapterNumber < Model.ChapterNumber).OrderByDescending(c => c.ChapterNumber).First();
+                <a href="@Url.Action("ReadChapter", "Series", new { id = prevChapter.Id })" class="btn btn-primary w-100">
+                    <i class="fas fa-arrow-left me-2"></i>Previous
+                </a>
+            }
+        </div>
+        <div class="col-md-4" style="text-align: center;">
+            <a href="@Url.Action("Detail", "Series", new { id = Model.Manga?.Id })" class="btn btn-secondary w-100">
+                <i class="fas fa-list me-2"></i>Chapter List
+            </a>
+        </div>
+        <div class="col-md-4" style="text-align: right;">
+            @if (Model.Manga?.Chapters?.Any(c => c.ChapterNumber > Model.ChapterNumber) ?? false)
+            {
+                var nextChapter = Model.Manga!.Chapters!.Where(c => c.ChapterNumber > Model.ChapterNumber).OrderBy(c => c.ChapterNumber).First();
+                <a href="@Url.Action("ReadChapter", "Series", new { id = nextChapter.Id })" class="btn btn-primary w-100">
+                    Next <i class="fas fa-arrow-right ms-2"></i>
+                </a>
+            }
+        </div>
+    </div>
+</div>

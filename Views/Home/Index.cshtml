@@ -1,0 +1,279 @@
+@model IEnumerable<MangaReader.Models.Manga>
+
+@{
+    ViewData["Title"] = "Home";
+    // Get a random featured manga, or the first one marked as featured
+    var featuredMangas = Model?.Where(m => m.IsFeatured).ToList() ?? new List<MangaReader.Models.Manga>();
+    var allMangas = Model?.ToList() ?? new List<MangaReader.Models.Manga>();
+    var featuredManga = featuredMangas.Any() ? featuredMangas.First() : allMangas.FirstOrDefault();
+    var latestManga = Model?.OrderByDescending(m => m.UpdatedAt).Take(6) ?? new List<MangaReader.Models.Manga>();
+}
+
+<div class="container">
+    @if (ViewBag.DatabaseError == true)
+    {
+        <div class="alert alert-danger shadow-sm mb-4 border-2" style="background: rgba(239, 68, 68, 0.1); border-color: #ef4444; border-radius: 12px;">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-exclamation-triangle fs-4 me-3 text-danger"></i>
+                <div>
+                    <h5 class="alert-heading mb-1 text-danger">Database Update Required</h5>
+                    <p class="mb-0 text-white-50 small">The database schema needs to be updated. This should happen automatically on the next restart, but you can also run it manually from the admin dashboard.</p>
+                </div>
+                @if (User.Identity?.IsAuthenticated == true && (User.HasClaim("IsAdmin", "True") || User.HasClaim("IsSubAdmin", "True")))
+                {
+                    <a href="@Url.Action("FixDatabase", "Admin")" class="btn btn-danger btn-sm ms-auto px-4">
+                        <i class="fas fa-tools me-2"></i>Apply Fix Now
+                    </a>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Featured Manga Section (Carousel) -->
+    @if (featuredMangas.Any())
+    {
+        <section class="mb-5">
+            <div class="section-header">
+                <h2>Featured</h2>
+                <div class="section-header-divider"></div>
+            </div>
+
+            <div class="featured-nav-wrap">
+                <button class="featured-nav-btn left" type="button" data-bs-target="#featuredCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+
+                <div id="featuredCarousel" class="manual-slide-track">
+                <div class="carousel-indicators">
+                    @for (int i = 0; i < featuredMangas.Count; i++)
+                    {
+                        <button type="button" data-bs-target="#featuredCarousel" data-bs-slide-to="@i" class="@(i == 0 ? "active" : "")" aria-current="@(i == 0 ? "true" : "false")" aria-label="Slide @(i+1)"></button>
+                    }
+                </div>
+
+                <div class="featured-track">
+                    @for (int i = 0; i < featuredMangas.Count; i++)
+                    {
+                        var fm = featuredMangas[i];
+                        var rawImg = fm.BannerUrl ?? fm.ImageUrl ?? "/images/default.jpg";
+                        var safeImg = (rawImg ?? "/images/default.jpg").Replace("`", "").Trim();
+                        <div class="featured-slide @(i == 0 ? "active" : "")">
+                            <div class="featured-item" style="background-image: url('@safeImg'); background-size: cover; background-position: @(fm.BannerPositionX)% @(fm.BannerPositionY)%;">
+                                <div class="featured-overlay">
+                                    @{ 
+                                        var a = fm.TitleShadowOpacity; 
+                                        var primary = Math.Min(a, 1); 
+                                        var secondary = Math.Max(a - 1, 0); 
+                                        var shadowCss = fm.HasTitleShadow ? (secondary > 0 ? $"0 2px {fm.TitleShadowSize}px rgba(0,0,0,1), 0 2px {fm.TitleShadowSize}px rgba(0,0,0,{Math.Min(secondary,1)})" : $"0 2px {fm.TitleShadowSize}px rgba(0,0,0,{primary})") : "none"; 
+                                        
+                                        var enableBannerShadow = ViewBag.EnableBannerShadow == "true";
+                                        var shadowStrength = ViewBag.BannerShadowStrength ?? "0.8";
+                                        var shadowDepth = ViewBag.BannerShadowDepth ?? "4";
+                                        var descriptionShadow = enableBannerShadow ? $"text-shadow: 0 2px {shadowDepth}px rgba(0,0,0,{shadowStrength});" : "";
+                                        
+                                        var description = fm.Description ?? "";
+                                        var mobileDescription = description.Length > 100 ? description.Substring(0, 100) + "..." : description;
+                                    }
+                                    <h3 class="featured-title" style="text-shadow:@shadowCss">@fm.Title</h3>
+                                    <p class="featured-description d-none d-md-block" style="@descriptionShadow">@description</p>
+                                    <p class="featured-description d-block d-md-none" style="@descriptionShadow">@mobileDescription</p>
+                                    <div class="featured-meta">
+                                        <span>
+                                            <i class="fas fa-user me-2"></i>@fm.Author
+                                        </span>
+                                        <span>
+                                            <i class="fas fa-book me-2"></i>@(fm.Chapters?.Count ?? 0) Chapters
+                                        </span>
+                                        <span>
+                                            <i class="fas fa-star me-2"></i>@((fm.Rating ?? 0) / 10.0)/5
+                                        </span>
+                                    </div>
+                                    <div style="margin-top: 1.5rem;">
+                                        <a asp-controller="Series" asp-action="Detail" asp-route-id="@fm.Id" class="btn btn-primary">Read Now</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+                </div>
+                <button class="featured-nav-btn right" type="button" data-bs-target="#featuredCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
+            </div>
+        </section>
+    }
+    else if (featuredManga != null)
+    {
+        <section class="mb-5">
+            <div class="section-header">
+                <h2>Featured</h2>
+                <div class="section-header-divider"></div>
+            </div>
+
+            @{ var rawImgSingle = featuredManga.BannerUrl ?? featuredManga.ImageUrl ?? "/images/default.jpg"; var safeImgSingle = (rawImgSingle ?? "/images/default.jpg").Replace("`", "").Trim(); }
+            <div class="featured-item" style="background-image: url('@safeImgSingle'); background-size: cover; background-position: center;">
+                <div class="featured-overlay">
+                    @{ var aa = featuredManga.TitleShadowOpacity; var p = Math.Min(aa, 1); var s = Math.Max(aa - 1, 0); var shadowSingle = featuredManga.HasTitleShadow ? (s > 0 ? $"0 2px {featuredManga.TitleShadowSize}px rgba(0,0,0,1), 0 2px {featuredManga.TitleShadowSize}px rgba(0,0,0,{Math.Min(s,1)})" : $"0 2px {featuredManga.TitleShadowSize}px rgba(0,0,0,{p})") : "none"; }
+                    <h3 class="featured-title" style="text-shadow:@shadowSingle">@featuredManga.Title</h3>
+                    <p class="featured-description">@featuredManga.Description</p>
+                    <div class="featured-meta">
+                        <span>
+                            <i class="fas fa-user me-2"></i>@featuredManga.Author
+                        </span>
+                        <span>
+                            <i class="fas fa-book me-2"></i>@(featuredManga.Chapters?.Count ?? 0) Chapters
+                        </span>
+                        <span>
+                            <i class="fas fa-star me-2"></i>@((featuredManga.Rating ?? 0) / 10.0)/5
+                        </span>
+                    </div>
+                    <div style="margin-top: 1.5rem;">
+                        <a asp-controller="Series" asp-action="Detail" asp-route-id="@featuredManga.Id" class="btn btn-primary">Read Now</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    }
+
+    <!-- Latest Updates Section -->
+    <section class="mb-5">
+        <div class="section-header">
+            <h2>Latest Updates</h2>
+            <div class="section-header-divider"></div>
+            <a href="@Url.Action("Index", "Series")" class="view-all">View All →</a>
+        </div>
+
+        <div class="row g-4">
+            @foreach (var manga in latestManga)
+            {
+                var genres = string.IsNullOrEmpty(manga.Genre) ? Array.Empty<string>() : manga.Genre.Split(',').Select(g => g.Trim()).ToArray();
+                var latestChapters = manga.Chapters?.OrderByDescending(c => c.ReleasedDate).Take(2).ToList();
+                var status = manga.Status ?? "Unknown";
+                var statusLower = status.ToLowerInvariant();
+                var statusClass = statusLower switch
+                {
+                    "ongoing" => "status-ongoing",
+                    "completed" => "status-completed",
+                    "dropped" => "status-dropped",
+                    "on hold" => "status-onhold",
+                    "coming soon" => "status-comingsoon",
+                    _ => "status-default"
+                };
+                var typeLabel = string.IsNullOrEmpty(manga.Type) ? "Manga" : manga.Type;
+                <div class="col-lg-4 col-md-6">
+                    <div class="latest-card" style="display:flex; gap:1rem; text-decoration:none; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; position: relative;">
+                        <a href="@Url.Action("Detail", "Series", new { id = manga.Id })" style="position:absolute; top:0; left:0; right:0; bottom:0; z-index:1;"></a>
+                        <div style="position:relative; width:110px; flex-shrink:0;">
+                            <img src="@(manga.ImageUrl ?? "/images/default.jpg")" alt="@manga.Title" style="width:100%; height:150px; object-fit:cover; border-radius:8px;" />
+                            <div style="position:absolute; top:6px; left:6px; display:flex; flex-direction:column; gap:1px; align-items:flex-start; z-index:2;">
+                                <span class="manga-tag type-tag">@typeLabel</span>
+                                <span class="manga-tag status-badge @statusClass" title="@status">@status</span>
+                            </div>
+                        </div>
+                        <div style="flex:1; display:flex; flex-direction:column; position:relative; z-index:2;">
+                            <div style="margin-bottom:0.25rem; font-weight:700; color: var(--text-primary);">@manga.Title</div>
+                            <div style="color: var(--text-muted); font-size:0.95rem; margin-bottom:0.5rem;">
+                                @string.Join(" , ", genres.Take(2))
+                            </div>
+                            @if (latestChapters?.Any() == true)
+                            {
+                                <div style="display:flex; flex-direction:column; gap:0.4rem; margin-top:0.25rem;">
+                                    @foreach (var ch in latestChapters)
+                                    {
+                                        <a href="@Url.Action("ReadChapter", "Series", new { id = ch.Id })" style="display:flex; justify-content:space-between; align-items:center; border:1px dashed var(--border-color); border-radius:8px; padding:0.4rem 0.6rem; text-decoration:none; color:inherit; background: rgba(255,255,255,0.02); transition: all 0.2s;" onmouseover="this.style.background='var(--bg-tertiary)'; this.style.borderColor='var(--primary-color)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'; this.style.borderColor='var(--border-color)'">
+                                            <span style="font-weight:600;">Ch @ch.ChapterNumber</span>
+                                            <span style="color: var(--text-muted); font-size:0.85rem;">@ch.ReleasedDate.ToString("dd MMM yyyy")</span>
+                                        </a>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (latestManga.Count() == 0)
+        {
+            <div style="text-align: center; padding: 3rem 1rem;">
+                <i class="fas fa-inbox" style="font-size: 3rem; color: var(--text-muted); margin-bottom: 1rem; display: block;"></i>
+                <p style="color: var(--text-muted); font-size: 1.1rem;">No manga found. Start adding manga to the CMS!</p>
+            </div>
+        }
+    </section>
+
+    <!-- Stats Section -->
+    <section class="mb-5">
+        <div class="row g-4">
+            <div class="col-md-3 col-sm-6">
+                <div style="background: linear-gradient(135deg, #6366f1, #818cf8); border-radius: 10px; padding: 2rem; text-align: center; aspect-ratio: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                    <i class="fas fa-book" style="font-size: 2.5rem; color: white; margin-bottom: 1rem;"></i>
+                    <h3 style="font-size: 2.5rem; font-weight: 700; margin: 0; color: white;">@(Model?.Count() ?? 0)</h3>
+                    <p style="color: rgba(255,255,255,0.8); margin: 0.5rem 0 0 0; font-size: 0.95rem; font-weight: 600;">Manga Series</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div style="background: linear-gradient(135deg, #ec4899, #f472b6); border-radius: 10px; padding: 2rem; text-align: center; aspect-ratio: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                    <i class="fas fa-list" style="font-size: 2.5rem; color: white; margin-bottom: 1rem;"></i>
+                    <h3 style="font-size: 2.5rem; font-weight: 700; margin: 0; color: white;">@(Model?.Sum(m => m.Chapters?.Count ?? 0) ?? 0)</h3>
+                    <p style="color: rgba(255,255,255,0.8); margin: 0.5rem 0 0 0; font-size: 0.95rem; font-weight: 600;">Total Chapters</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div style="background: linear-gradient(135deg, #10b981, #34d399); border-radius: 10px; padding: 2rem; text-align: center; aspect-ratio: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                    <i class="fas fa-eye" style="font-size: 2.5rem; color: white; margin-bottom: 1rem;"></i>
+                    <h3 style="font-size: 2.5rem; font-weight: 700; margin: 0; color: white;">@(Model?.Sum(m => m.Chapters?.Sum(c => c.ViewCount) ?? 0) ?? 0)</h3>
+                    <p style="color: rgba(255,255,255,0.8); margin: 0.5rem 0 0 0; font-size: 0.95rem; font-weight: 600;">Total Views</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div style="background: linear-gradient(135deg, #f59e0b, #fbbf24); border-radius: 10px; padding: 2rem; text-align: center; aspect-ratio: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                    <i class="fas fa-fire" style="font-size: 2.5rem; color: white; margin-bottom: 1rem;"></i>
+                    <h3 style="font-size: 2.5rem; font-weight: 700; margin: 0; color: white;">@((Model?.Any() == true) ? (Model.Max(m => m.Rating ?? 0) / 10.0).ToString("0.0") : "0.0")</h3>
+                    <p style="color: rgba(255,255,255,0.8); margin: 0.5rem 0 0 0; font-size: 0.95rem; font-weight: 600;">Top Rating (/5)</p>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const carouselEl = document.getElementById('featuredCarousel');
+  if (!carouselEl) return;
+  const wrap = carouselEl.closest('.featured-nav-wrap') || carouselEl.parentElement;
+  const prevBtn = wrap.querySelector('[data-bs-slide="prev"]');
+  const nextBtn = wrap.querySelector('[data-bs-slide="next"]');
+  const indicators = wrap.querySelectorAll('.carousel-indicators button');
+  const inner = carouselEl.querySelector('.featured-track');
+  const items = Array.from(carouselEl.querySelectorAll('.featured-slide'));
+  carouselEl.style.setProperty('--n', String(items.length));
+  if (inner) { inner.style.width = String(items.length * 100) + '%'; }
+  items.forEach(it => { it.style.flex = '0 0 ' + String(100 / Math.max(items.length,1)) + '%'; it.style.display = 'block'; });
+  let idx = Math.max(0, items.findIndex(i => i.classList.contains('active')));
+  function applyIndex(newIdx) {
+    const len = items.length;
+    idx = ((newIdx % len) + len) % len;
+    carouselEl.style.setProperty('--i', String(idx));
+    items.forEach((it, i) => it.classList.toggle('active', i === idx));
+    indicators.forEach((b, i) => b.classList.toggle('active', i === idx));
+  }
+  applyIndex(idx);
+  let auto = setInterval(() => applyIndex(idx + 1), 5000);
+  function resetAuto() {
+    clearInterval(auto);
+    auto = setInterval(() => applyIndex(idx + 1), 5000);
+  }
+  function go(dir) {
+    applyIndex(idx + (dir === 'next' ? 1 : -1));
+    resetAuto();
+  }
+  prevBtn?.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); go('prev'); });
+  nextBtn?.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); go('next'); });
+  indicators.forEach((btn, i) => {
+    btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); applyIndex(i); resetAuto(); });
+  });
+});
+</script>

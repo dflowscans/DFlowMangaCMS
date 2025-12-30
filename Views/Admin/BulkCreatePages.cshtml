@@ -1,0 +1,144 @@
+@{
+    ViewData["Title"] = "Bulk Upload Pages";
+    var chapter = ViewBag.Chapter as Chapter;
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="gradient-text mb-2">📚 Bulk Upload Pages</h1>
+            <p class="text-muted">
+                <strong>@chapter?.Manga?.Title</strong> - Chapter @chapter?.ChapterNumber: @chapter?.Title
+            </p>
+        </div>
+        <a asp-action="PageList" asp-route-chapterId="@chapter?.Id" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Pages
+        </a>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="card modern-card">
+        <div class="card-body">
+            <form asp-action="BulkCreatePages" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="chapterId" value="@chapter?.Id" />
+
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                <div class="mb-4">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>How to use:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Paste one image URL per line</li>
+                            <li>Pages will be numbered automatically in order</li>
+                            <li>Empty lines will be ignored</li>
+                            <li>You can paste as many URLs as you want</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="form-group mb-4">
+                    <label for="imageUrls" class="form-label">
+                        <i class="fas fa-images me-2"></i>Image URLs (one per line)
+                    </label>
+                    <textarea class="form-control" 
+                              id="imageUrls" 
+                              name="imageUrls" 
+                              rows="15" 
+                              placeholder="https://example.com/page1.jpg
+https://example.com/page2.jpg
+https://example.com/page3.jpg
+..."
+                              required></textarea>
+                    <small class="form-text text-muted">Paste your image URLs here, one per line</small>
+                </div>
+
+                <div class="form-group mb-4">
+                    <h5 class="mb-3">Preview</h5>
+                    <div id="urlPreview" class="alert alert-secondary">
+                        <p class="mb-0">URLs will be counted here...</p>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload me-2"></i>Upload All Pages
+                    </button>
+                    <a asp-action="PageList" asp-route-chapterId="@chapter?.Id" class="btn btn-secondary">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .modern-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+
+    .form-control {
+        background: var(--bg-dark);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+    }
+
+    .form-control:focus {
+        background: var(--bg-dark);
+        border-color: var(--primary-color);
+        color: var(--text-primary);
+        box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
+    }
+
+    textarea.form-control {
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+    }
+
+    .alert-info {
+        background: rgba(99, 102, 241, 0.1);
+        border-color: var(--primary-color);
+        color: var(--text-primary);
+    }
+
+    .alert-secondary {
+        background: var(--bg-dark);
+        border-color: var(--border-color);
+        color: var(--text-secondary);
+    }
+</style>
+
+<script>
+    document.getElementById('imageUrls').addEventListener('input', function(e) {
+        const text = e.target.value;
+        const urls = text.split('\n').filter(line => line.trim().length > 0);
+        const preview = document.getElementById('urlPreview');
+        
+        if (urls.length === 0) {
+            preview.innerHTML = '<p class="mb-0">URLs will be counted here...</p>';
+        } else {
+            preview.innerHTML = `
+                <p class="mb-0">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>${urls.length}</strong> page(s) ready to upload
+                </p>
+            `;
+        }
+    });
+</script>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

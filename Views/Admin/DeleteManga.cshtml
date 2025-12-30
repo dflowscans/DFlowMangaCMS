@@ -1,0 +1,44 @@
+@model MangaReader.Models.Manga
+
+@{
+    ViewData["Title"] = "Delete Manga";
+}
+
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div style="background: var(--bg-secondary); border: 2px solid var(--accent); border-radius: 10px; padding: 2rem;">
+                <div style="text-align: center; margin-bottom: 2rem;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: var(--accent); display: block; margin-bottom: 1rem;"></i>
+                    <h2 style="margin: 0; color: var(--text-primary);">Delete Manga?</h2>
+                </div>
+
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                    Are you sure you want to delete "<strong>@Model.Title</strong>"? This action cannot be undone and all associated chapters and pages will also be deleted.
+                </p>
+
+                <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 2rem;">
+                    <p style="margin: 0.3rem 0; font-size: 0.9rem;">
+                        <strong>Title:</strong> @Model.Title
+                    </p>
+                    <p style="margin: 0.3rem 0; font-size: 0.9rem;">
+                        <strong>Author:</strong> @(Model.Author ?? "N/A")
+                    </p>
+                    <p style="margin: 0.3rem 0; font-size: 0.9rem;">
+                        <strong>Chapters:</strong> @(Model.Chapters?.Count ?? 0)
+                    </p>
+                </div>
+
+                <form asp-action="DeleteManga" method="post" style="display: flex; gap: 1rem;">
+                    <input type="hidden" asp-for="Id" />
+                    <button type="submit" class="btn btn-danger flex-fill">
+                        <i class="fas fa-trash me-2"></i>Yes, Delete
+                    </button>
+                    <a href="@Url.Action("MangaList", "Admin")" class="btn btn-secondary flex-fill">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

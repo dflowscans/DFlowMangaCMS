@@ -1,0 +1,95 @@
+@model MangaReader.Models.ChapterPage
+
+@{
+    ViewData["Title"] = Model?.Id > 0 ? "Edit Page" : "Add Page";
+    var chapter = ViewBag.Chapter;
+}
+
+<div class="container-fluid">
+    <div class="section-header mb-4">
+        <h2>@ViewData["Title"] - @chapter.Manga.Title Ch. @chapter.ChapterNumber</h2>
+        <div class="section-header-divider"></div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <form asp-action="@(Model?.Id > 0 ? "EditPage" : "CreatePage")" method="post" 
+                  style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 2rem;">
+                @if (Model?.Id > 0)
+                {
+                    <input type="hidden" asp-for="Id" />
+                    <input type="hidden" asp-for="ChapterId" />
+                    <input type="hidden" asp-for="CreatedAt" />
+                }
+                else
+                {
+                    <input type="hidden" asp-for="ChapterId" value="@chapter.Id" />
+                }
+
+                <div class="mb-3">
+                    <label asp-for="PageNumber" class="form-label">Page Number *</label>
+                    <input asp-for="PageNumber" type="number" min="1" class="form-control" placeholder="Page number"
+                           style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);" required>
+                    <span asp-validation-for="PageNumber" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="ImageUrl" class="form-label">Image URL *</label>
+                    <input asp-for="ImageUrl" class="form-control" placeholder="https://..." 
+                           style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);" required>
+                    <small style="color: var(--text-muted); display: block; margin-top: 0.3rem;">Direct link to the page image</small>
+                    <span asp-validation-for="ImageUrl" class="text-danger"></span>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Width" class="form-label">Width (pixels)</label>
+                        <input asp-for="Width" type="number" class="form-control" placeholder="1200"
+                               style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Height" class="form-label">Height (pixels)</label>
+                        <input asp-for="Height" type="number" class="form-control" placeholder="1600"
+                               style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save me-2"></i>@(Model?.Id > 0 ? "Update" : "Add") Page
+                    </button>
+                    <a href="@Url.Action("PageList", "Admin", new { chapterId = chapter.Id })" class="btn btn-secondary">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-lg-4">
+            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.5rem;">
+                <h5 style="margin-top: 0;">Preview</h5>
+                @if (!string.IsNullOrEmpty(Model?.ImageUrl))
+                {
+                    <img src="@Model.ImageUrl" alt="Page @Model.PageNumber" style="width: 100%; border-radius: 8px; margin-bottom: 1rem; max-height: 400px; object-fit: cover;">
+                }
+                else
+                {
+                    <div style="background: var(--bg-tertiary); border: 1px dashed var(--border-color); aspect-ratio: 3/4; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+                        <span style="color: var(--text-muted);">No image yet</span>
+                    </div>
+                }
+                <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 8px;">
+                    <p style="margin: 0.3rem 0; font-size: 0.9rem;">
+                        <strong>Page:</strong> @Model?.PageNumber
+                    </p>
+                    @if (Model?.Width > 0 && Model?.Height > 0)
+                    {
+                        <p style="margin: 0.3rem 0; font-size: 0.9rem;">
+                            <strong>Size:</strong> @Model?.Width x @Model?.Height
+                        </p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

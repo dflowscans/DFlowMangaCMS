@@ -1,0 +1,286 @@
+@model IEnumerable<MangaReader.Models.UserBookmark>
+
+@{
+    ViewData["Title"] = "My Bookmarks";
+    var categorizedBookmarks = Model.GroupBy(b => b.Status).ToDictionary(g => g.Key, g => g.ToList());
+}
+
+<div class="container-fluid">
+    <div class="section-header mb-4">
+        <h2>My Bookmarks</h2>
+        <div class="section-header-divider"></div>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="text-center py-5">
+            <i class="fas fa-bookmark fa-3x mb-3 text-muted"></i>
+            <p class="text-muted">You haven't bookmarked any manga yet.</p>
+            <a asp-controller="Series" asp-action="Index" class="btn btn-primary">Browse Manga</a>
+        </div>
+    }
+    else
+    {
+        <ul class="nav nav-tabs mb-4" id="bookmarkTabs" role="tablist" style="border-bottom-color: var(--border-color);">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab" style="color: var(--text-primary);">All (@Model.Count())</button>
+            </li>
+            @foreach (var status in Enum.GetValues<MangaReader.Models.BookmarkStatus>())
+            {
+                var count = categorizedBookmarks.ContainsKey(status) ? categorizedBookmarks[status].Count : 0;
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="@status-tab" data-bs-toggle="tab" data-bs-target="#@status" type="button" role="tab" style="color: var(--text-primary);">
+                        @status (@count)
+                    </button>
+                </li>
+            }
+        </ul>
+
+        <div class="tab-content" id="bookmarkTabsContent">
+            <div class="tab-pane fade show active" id="all" role="tabpanel">
+                <div class="row g-4">
+                    @foreach (var bookmark in Model)
+                    {
+                        var manga = bookmark.Manga;
+                        if (manga != null) {
+                            <div class="col-lg-3 col-md-4 col-sm-6">
+                                <div class="manga-card">
+                                    <div class="manga-card-image">
+                                        <img src="@(manga.ImageUrl ?? "/images/default.jpg")" alt="@manga.Title" />
+                                        <div class="manga-card-overlay">
+                                            <p style="margin: 0; color: var(--text-secondary);">
+                                                <i class="fas fa-bookmark me-1"></i>@bookmark.Status
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="manga-card-body">
+                                        <h5 class="manga-card-title">@manga.Title</h5>
+                                        <p class="manga-card-meta">
+                                            <i class="fas fa-clock me-1"></i>Updated @bookmark.UpdatedAt.ToString("MMM dd")
+                                        </p>
+                                        
+                                        <div class="d-flex gap-2 mt-2">
+                                            <a asp-action="Detail" asp-route-id="@manga.Id" class="btn btn-primary btn-sm flex-grow-1" style="font-size: 0.9rem;">
+                                                View
+                                            </a>
+                                            <select class="form-select form-select-sm bookmark-status-select flex-grow-1" 
+                                                    style="width: auto; background-color: var(--bg-tertiary); color: var(--text-primary); border-color: var(--border-color);"
+                                                    data-manga-id="@manga.Id" data-original-value="@((int)bookmark.Status)">
+                                                @foreach (var s in Enum.GetValues<MangaReader.Models.BookmarkStatus>())
+                                                {
+                                                    <option value="@((int)s)" selected="@(s == bookmark.Status)">@s</option>
+                                                }
+                                                <option value="-1">Remove</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+            
+            @foreach (var status in Enum.GetValues<MangaReader.Models.BookmarkStatus>())
+            {
+                <div class="tab-pane fade" id="@status" role="tabpanel">
+                    <div class="row g-4">
+                        @if (categorizedBookmarks.ContainsKey(status))
+                        {
+                            @foreach (var bookmark in categorizedBookmarks[status])
+                            {
+                                var manga = bookmark.Manga;
+                                if (manga != null) {
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <div class="manga-card">
+                                            <div class="manga-card-image">
+                                                <img src="@(manga.ImageUrl ?? "/images/default.jpg")" alt="@manga.Title" />
+                                                <div class="manga-card-overlay">
+                                                    <p style="margin: 0; color: var(--text-secondary);">
+                                                        <i class="fas fa-bookmark me-1"></i>@bookmark.Status
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div class="manga-card-body">
+                                                <h5 class="manga-card-title">@manga.Title</h5>
+                                                <p class="manga-card-meta">
+                                                    <i class="fas fa-clock me-1"></i>Updated @bookmark.UpdatedAt.ToString("MMM dd")
+                                                </p>
+                                                <div class="d-flex gap-2 mt-2">
+                                                    <a asp-action="Detail" asp-route-id="@manga.Id" class="btn btn-primary btn-sm flex-grow-1" style="font-size: 0.9rem;">
+                                                        View
+                                                    </a>
+                                                    <select class="form-select form-select-sm bookmark-status-select flex-grow-1" 
+                                                            style="width: auto; background-color: var(--bg-tertiary); color: var(--text-primary); border-color: var(--border-color);"
+                                                            data-manga-id="@manga.Id" data-original-value="@((int)bookmark.Status)">
+                                                        @foreach (var s in Enum.GetValues<MangaReader.Models.BookmarkStatus>())
+                                                        {
+                                                            <option value="@((int)s)" selected="@(s == bookmark.Status)">@s</option>
+                                                        }
+                                                        <option value="-1">Remove</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        }
+                        else
+                        {
+                            <div class="col-12 text-center py-5">
+                                <p class="text-muted">No manga in this category.</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+  <div id="liveToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body">
+        Bookmark updated successfully.
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+    <div id="errorToast" class="toast align-items-center text-white bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body">
+        An error occurred.
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const selects = document.querySelectorAll('.bookmark-status-select');
+            
+            selects.forEach(select => {
+                select.addEventListener('change', async function() {
+                    const mangaId = this.getAttribute('data-manga-id');
+                    const status = parseInt(this.value);
+                    const originalValue = this.getAttribute('data-original-value');
+                    
+                    // Disable select to prevent multiple requests
+                    this.disabled = true;
+
+                    if (status === -1) {
+                        if(confirm('Are you sure you want to remove this bookmark?')) {
+                            await removeBookmark(mangaId);
+                            // We reload to remove the item from the list
+                            location.reload(); 
+                        } else {
+                            this.value = originalValue;
+                            this.disabled = false;
+                        }
+                    } else {
+                        const success = await updateBookmark(mangaId, status);
+                        if (success) {
+                            // Update the original value so subsequent changes work correctly
+                            this.setAttribute('data-original-value', status);
+                            showToast('Bookmark updated successfully.', 'success');
+                            
+                            // If we are in a specific category tab (not "All"), we might want to reload or remove the card.
+                            // But for "All" tab, it just stays. 
+                            // If we are in a specific status tab, the item should technically disappear, 
+                            // but reloading is jarring. 
+                            // Let's reload if the current active tab is not 'all-tab' and the new status matches the tab?
+                            // Actually, simpler to just reload if we want consistency, but user experience is better without reload.
+                            // We will reload only if the user is viewing a filtered list that this item no longer belongs to.
+                            const activeTab = document.querySelector('.nav-link.active');
+                            if (activeTab.id !== 'all-tab' && activeTab.id !== originalValue + '-tab') {
+                                // If we are in a specific tab and changed status, it might be confusing if it stays or leaves without animation.
+                                // For now, we'll keep it simple: no reload, just toast. 
+                                // But wait, if I'm in "Reading" and I change to "Completed", it should probably disappear from "Reading" view.
+                                // Let's check if we are in a specific status tab.
+                                if (activeTab.getAttribute('data-bs-target') !== '#all') {
+                                     // If we are in a specific tab, reload to reflect changes
+                                     location.reload();
+                                }
+                            }
+                        } else {
+                            // Revert value on failure
+                            this.value = originalValue;
+                        }
+                        this.disabled = false;
+                    }
+                });
+            });
+        });
+
+        async function updateBookmark(mangaId, status) {
+            try {
+                const response = await fetch('/Series/AddBookmark', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ mangaId: parseInt(mangaId), status: status })
+                });
+                const data = await response.json();
+                if (!data.success) {
+                    showToast(data.message, 'error');
+                    return false;
+                }
+                return true;
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('An error occurred while updating the bookmark.', 'error');
+                return false;
+            }
+        }
+
+        async function removeBookmark(mangaId) {
+             try {
+                const response = await fetch('/Series/RemoveBookmark', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ mangaId: parseInt(mangaId), status: 0 })
+                });
+                const data = await response.json();
+                 if (!data.success) {
+                    showToast(data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('An error occurred while removing the bookmark.', 'error');
+            }
+        }
+        
+        function showToast(message, type) {
+            const toastEl = type === 'success' ? document.getElementById('liveToast') : document.getElementById('errorToast');
+            const toastBody = toastEl.querySelector('.toast-body');
+            toastBody.textContent = message;
+            const toast = new bootstrap.Toast(toastEl);
+            toast.show();
+        }
+    </script>
+}
+
+<style>
+    .nav-tabs .nav-link {
+        border: none;
+        border-bottom: 2px solid transparent;
+        transition: all 0.3s ease;
+    }
+    .nav-tabs .nav-link:hover {
+        border-color: var(--border-color);
+        isolation: isolate;
+    }
+    .nav-tabs .nav-link.active {
+        background: transparent;
+        border-bottom: 2px solid var(--primary-color);
+        color: var(--primary-color) !important;
+        font-weight: 600;
+    }
+</style>

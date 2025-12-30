@@ -1,0 +1,305 @@
+@model MangaReader.Models.Manga
+
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<div class="container-fluid">
+    <!-- Series Header -->
+    <div class="row mb-5">
+        <div class="col-md-4 col-lg-3 mb-4 mb-md-0">
+            <img src="@(Model.ImageUrl ?? "/images/default.jpg")" 
+                 alt="@Model.Title" 
+                 style="width: 100%; border-radius: 10px; box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);">
+        </div>
+        <div class="col-md-8 col-lg-9">
+            <h1 style="font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);">@Model.Title</h1>
+            
+            <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 1.5rem;">
+                <div>
+                    <span style="color: var(--text-muted); display: block; font-size: 0.9rem;">Author</span>
+                    <span style="font-weight: 600;">@(Model.Author ?? "Unknown")</span>
+                </div>
+                <div>
+                    <span style="color: var(--text-muted); display: block; font-size: 0.9rem;">Artist</span>
+                    <span style="font-weight: 600;">@(Model.Artist ?? "Unknown")</span>
+                </div>
+                <div>
+                    <span style="color: var(--text-muted); display: block; font-size: 0.9rem;">Status</span>
+                    <span style="font-weight: 600; color: var(--primary-light);">@(Model.Status ?? "Unknown")</span>
+                </div>
+                <div>
+                    <span style="color: var(--text-muted); display: block; font-size: 0.9rem;">Rating</span>
+                    <span style="font-weight: 600; color: var(--accent);">
+                        <i class="fas fa-star"></i> @((Model.Rating ?? 0) / 10.0)/5
+                    </span>
+                </div>
+            </div>
+
+            <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 1.5rem;">
+                @Model.Description
+            </p>
+
+            @if (!string.IsNullOrEmpty(Model.Genre))
+            {
+                <div style="margin-bottom: 1.5rem;">
+                    <strong style="display: block; margin-bottom: 0.5rem; color: var(--text-muted);">Genres</strong>
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                        @foreach (var genre in Model.Genre.Split(','))
+                        {
+                            <span style="background: var(--bg-tertiary); border: 1px solid var(--primary-color); color: var(--primary-light); padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.85rem;">
+                                @genre.Trim()
+                            </span>
+                        }
+                    </div>
+                </div>
+            }
+
+            <div style="display: flex; gap: 1rem;">
+                <button class="btn btn-primary" onclick="scrollToChapters()">
+                    <i class="fas fa-book-open me-2"></i>Read Now
+                </button>
+                @if (User.Identity?.IsAuthenticated ?? false)
+                {
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" id="bookmarkBtn">
+                            <i class="fas fa-bookmark me-2"></i>Add to Bookmarks
+                        </button>
+                        <ul class="dropdown-menu" style="background: var(--bg-secondary); border-color: var(--border-color);">
+                            <li><a class="dropdown-item" style="color: var(--text-primary); cursor: pointer;" onclick="addBookmark(0)"><i class="fas fa-bookmark me-2"></i>Plan to Read</a></li>
+                            <li><a class="dropdown-item" style="color: var(--text-primary); cursor: pointer;" onclick="addBookmark(1)"><i class="fas fa-book me-2"></i>Reading</a></li>
+                            <li><a class="dropdown-item" style="color: var(--text-primary); cursor: pointer;" onclick="addBookmark(2)"><i class="fas fa-check me-2"></i>Completed</a></li>
+                            <li><a class="dropdown-item" style="color: var(--text-primary); cursor: pointer;" onclick="addBookmark(3)"><i class="fas fa-pause me-2"></i>On Hold</a></li>
+                            <li><a class="dropdown-item" style="color: var(--text-primary); cursor: pointer;" onclick="addBookmark(4)"><i class="fas fa-times me-2"></i>Dropped</a></li>
+                            <li><hr class="dropdown-divider" style="border-color: var(--border-color);"></li>
+                            <li><a class="dropdown-item" style="color: #ef4444; cursor: pointer;" onclick="removeBookmark()"><i class="fas fa-trash me-2"></i>Remove Bookmark</a></li>
+                        </ul>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.5rem; margin-top:0.75rem;">
+                        <div id="ratingStars" data-manga-id="@Model.Id" style="display:flex; gap:0.25rem;">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                var filled = (ViewBag.UserRating ?? 0) >= i;
+                                <span class="star" data-value="@i" style="cursor:pointer; color:@(filled ? "#fbbf24" : "#64748b"); transition: color 0.2s ease;"><i class="fas fa-star"></i></span>
+                            }
+                        </div>
+                        <span id="ratingLabel" style="color: var(--text-muted); font-size:0.9rem;">
+                            @(ViewBag.UserRating != null && ViewBag.UserRating > 0 ? $"Your Rating: {ViewBag.UserRating}/5" : "Not rated yet")
+                        </span>
+                    </div>
+                }
+                else
+                {
+                    <a href="@Url.Action("Login", "Auth")" class="btn btn-secondary">
+                        <i class="fas fa-bookmark me-2"></i>Login to Bookmark
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Chapters Section -->
+    <div id="chapters-section">
+        <div class="section-header mb-4">
+            <h2>Chapters (@(Model.Chapters?.Count ?? 0))</h2>
+            <div class="section-header-divider"></div>
+        </div>
+
+        @if (Model.Chapters?.Any() == true)
+        {
+            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden;">
+                <div style="max-height: 600px; overflow-y: auto;">
+                    @foreach (var chapter in Model.Chapters.OrderByDescending(c => c.ChapterNumber))
+                    {
+                        <div style="border-bottom: 1px solid var(--border-color); padding: 1.2rem; display: flex; justify-content: space-between; align-items: center; transition: background 0.3s ease; cursor: pointer;"
+                             onmouseover="this.style.background='var(--bg-tertiary)'"
+                             onmouseout="this.style.background='transparent'">
+                            <div>
+                                <h5 style="margin: 0 0 0.3rem 0; font-weight: 600;">
+                                    <i class="fas fa-book-open me-2" style="color: var(--primary-light);"></i>
+                                    Chapter @chapter.ChapterNumber
+                                </h5>
+                                @if (!string.IsNullOrEmpty(chapter.Title))
+                                {
+                                    <p style="margin: 0; font-size: 0.9rem; color: var(--text-muted);">
+                                        @chapter.Title
+                                    </p>
+                                }
+                                <p style="margin: 0.3rem 0 0 0; font-size: 0.8rem; color: var(--text-muted);">
+                                    <i class="fas fa-calendar me-1"></i>@chapter.ReleasedDate.ToString("MMM dd, yyyy")
+                                    <i class="fas fa-eye ms-3 me-1"></i>@chapter.ViewCount views
+                                </p>
+                            </div>
+                            <a href="@Url.Action("ReadChapter", "Series", new { id = chapter.Id })" class="btn btn-primary btn-sm">
+                                <i class="fas fa-arrow-right me-1"></i>Read
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <div style="text-align: center; padding: 3rem 1rem; background: var(--bg-secondary); border-radius: 10px;">
+                <i class="fas fa-inbox" style="font-size: 2rem; color: var(--text-muted); margin-bottom: 1rem; display: block;"></i>
+                <p style="color: var(--text-muted);">No chapters available yet.</p>
+            </div>
+        }
+    </div>
+</div>
+
+<script>
+function scrollToChapters() {
+    document.getElementById('chapters-section').scrollIntoView({ behavior: 'smooth' });
+}
+
+const mangaId = @Model.Id;
+const bookmarkStatusNames = ['Plan to Read', 'Reading', 'Completed', 'On Hold', 'Dropped'];
+
+async function addBookmark(status) {
+    try {
+        const response = await fetch('@Url.Action("AddBookmark", "Series")', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                mangaId: mangaId,
+                status: status
+            })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            const bookmarkBtn = document.getElementById('bookmarkBtn');
+            bookmarkBtn.innerHTML = `<i class="fas fa-bookmark me-2"></i>${bookmarkStatusNames[status]}`;
+            showNotification('Bookmark added: ' + bookmarkStatusNames[status], 'success');
+            updateBookmarkUI();
+        } else {
+            showNotification(data.message, 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('Error adding bookmark', 'error');
+    }
+}
+
+async function removeBookmark() {
+    try {
+        const response = await fetch('@Url.Action("RemoveBookmark", "Series")', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                mangaId: mangaId
+            })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            const bookmarkBtn = document.getElementById('bookmarkBtn');
+            bookmarkBtn.innerHTML = '<i class="fas fa-bookmark me-2"></i>Add to Bookmarks';
+            showNotification('Bookmark removed', 'success');
+            updateBookmarkUI();
+        } else {
+            showNotification(data.message, 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('Error removing bookmark', 'error');
+    }
+}
+
+async function updateBookmarkUI() {
+    try {
+        const response = await fetch('@Url.Action("GetUserBookmark", "Series")?mangaId=' + mangaId);
+        const data = await response.json();
+        
+        if (data.bookmarked) {
+            const bookmarkBtn = document.getElementById('bookmarkBtn');
+            bookmarkBtn.innerHTML = `<i class="fas fa-bookmark me-2"></i>${bookmarkStatusNames[data.status]}`;
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        background: ${type === 'success' ? '#10b981' : '#ef4444'};
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 5px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 1000;
+        animation: slideIn 0.3s ease-out;
+    `;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// Load bookmark status on page load
+document.addEventListener('DOMContentLoaded', updateBookmarkUI);
+
+document.addEventListener('DOMContentLoaded', () => {
+    const container = document.getElementById('ratingStars');
+    if (!container) return;
+    const mangaIdLocal = parseInt(container.getAttribute('data-manga-id')) || @Model.Id;
+    container.querySelectorAll('.star').forEach(el => {
+        el.addEventListener('click', async () => {
+            const val = parseInt(el.getAttribute('data-value')) || 0;
+            const resp = await fetch('@Url.Action("RateManga", "Series")', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mangaId: mangaIdLocal, rating: val })
+            });
+            const data = await resp.json();
+            if (!data.success) {
+                showNotification(data.message || 'Error rating manga', 'error');
+                return;
+            }
+            const label = document.getElementById('ratingLabel');
+            if (label) label.textContent = `Your Rating: ${data.userRating}/5`;
+            
+            // Color stars based on user's specific rating
+            container.querySelectorAll('.star').forEach((s, idx) => {
+                s.style.color = (idx + 1) <= data.userRating ? '#fbbf24' : '#64748b';
+            });
+            showNotification('Rating saved!', 'success');
+        });
+    });
+});
+</script>
+
+<style>
+@@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+</style>

@@ -1,0 +1,60 @@
+@{
+    ViewData["Title"] = "Login";
+}
+
+<div class="container" style="max-width: 400px; margin-top: 4rem;">
+    <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 2rem;">
+        <h2 style="text-align: center; margin-bottom: 2rem; color: var(--primary-light);">
+            <i class="fas fa-lock me-2"></i>Login
+        </h2>
+
+        @if (ViewData.ModelState.Values.SelectMany(v => v.Errors).Count() > 0)
+        {
+            <div style="background: rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444; padding: 1rem; margin-bottom: 1rem; border-radius: 5px; color: #fca5a5;">
+                <strong>Login Failed</strong>
+                @foreach (var modelState in ViewData.ModelState.Values)
+                {
+                    @foreach (var error in modelState.Errors)
+                    {
+                        <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem;">@error.ErrorMessage</p>
+                    }
+                }
+            </div>
+        }
+
+        <form method="post" action="@Url.Action("Login", "Auth")">
+            @Html.AntiForgeryToken()
+
+            <div class="mb-3">
+                <label for="username" style="color: var(--text-secondary); font-weight: 500; margin-bottom: 0.5rem; display: block;">
+                    <i class="fas fa-user me-1"></i>Username
+                </label>
+                <input type="text" id="username" name="username" class="form-control" 
+                       style="background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 5px; padding: 0.75rem;"
+                       placeholder="Enter your username" required />
+            </div>
+
+            <div class="mb-3">
+                <label for="password" style="color: var(--text-secondary); font-weight: 500; margin-bottom: 0.5rem; display: block;">
+                    <i class="fas fa-lock me-1"></i>Password
+                </label>
+                <input type="password" id="password" name="password" class="form-control" 
+                       style="background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 5px; padding: 0.75rem;"
+                       placeholder="Enter your password" required />
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100" style="margin-top: 1.5rem; border-radius: 5px; padding: 0.75rem;">
+                <i class="fas fa-sign-in-alt me-2"></i>Sign In
+            </button>
+        </form>
+
+        <hr style="border-color: var(--border-color); margin: 1.5rem 0;" />
+
+        <p style="text-align: center; color: var(--text-muted); margin: 0;">
+            Don't have an account?
+            <a href="@Url.Action("Register", "Auth")" style="color: var(--primary-light); text-decoration: none; font-weight: 600;">
+                Create one here
+            </a>
+        </p>
+    </div>
+</div>

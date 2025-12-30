@@ -1,0 +1,173 @@
+@model MangaReader.Models.Chapter
+
+@{
+    ViewData["Title"] = Model?.Id > 0 ? "Edit Chapter" : "Create Chapter";
+    var manga = ViewBag.Manga;
+}
+
+<div class="container-fluid">
+    <div class="section-header mb-4">
+        <h2>@ViewData["Title"] - @manga.Title</h2>
+        <div class="section-header-divider"></div>
+
+<script>
+    function autoSortUrls() {
+        const textarea = document.getElementById('pageUrlsTextarea');
+        if (!textarea) return;
+        
+        const content = textarea.value;
+        if (!content.trim()) return;
+
+        // 1. Extract all URLs from the text (handles multiple URLs per line, spaces, etc.)
+        const urlRegex = /(https?:\/\/[^\s\n\r\t]+)/g;
+        let urls = content.match(urlRegex) || [];
+        
+        // 2. Clean URLs (remove trailing commas, semicolons, etc. that might be caught)
+        urls = urls.map(url => url.replace(/[;,]$/, '').trim()).filter(url => url.length > 0);
+        
+        if (urls.length === 0) return;
+
+        // 3. Natural Sort by Filename
+        const sortByFilename = (a, b) => {
+            const getFilename = (url) => {
+                const parts = url.split('/');
+                return parts[parts.length - 1] || url;
+            };
+            return getFilename(a).localeCompare(getFilename(b), undefined, { numeric: true, sensitivity: 'base' });
+        };
+
+        // 4. Sort URLs
+        urls.sort(sortByFilename);
+
+        // 5. Update textarea with one URL per line
+        textarea.value = urls.join('\n');
+        
+        // Visual feedback
+        const btn = event.currentTarget;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check me-1"></i>Sorted!';
+        btn.classList.replace('btn-primary', 'btn-success');
+        
+        setTimeout(() => {
+            btn.innerHTML = originalHtml;
+            btn.classList.replace('btn-success', 'btn-primary');
+        }, 2000);
+    }
+</script>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <form asp-action="@(Model?.Id > 0 ? "EditChapter" : "CreateChapter")" method="post" enctype="multipart/form-data"
+                  style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 2rem;">
+                @if (Model?.Id > 0)
+                {
+                    <input type="hidden" asp-for="Id" />
+                    <input type="hidden" asp-for="MangaId" />
+                    <input type="hidden" asp-for="CreatedAt" />
+                    <input type="hidden" asp-for="ViewCount" />
+                }
+                else
+                {
+                    <input type="hidden" asp-for="MangaId" value="@manga.Id" />
+                }
+
+                <div class="mb-3">
+                    <label asp-for="ChapterNumber" class="form-label">Chapter Number * (supports decimals: 1, 1.1, 1.2, 4.5, etc.)</label>
+                    <input asp-for="ChapterNumber" class="form-control" placeholder="e.g., 1, 1.5, 4.2"
+                           style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);" required>
+                    <span asp-validation-for="ChapterNumber" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Title" class="form-label">Chapter Title</label>
+                    <input asp-for="Title" class="form-control" placeholder="Enter chapter title (optional)"
+                           style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                    <span asp-validation-for="Title" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Description" class="form-label">Description</label>
+                    <textarea asp-for="Description" class="form-control" rows="3" placeholder="Chapter description (optional)"
+                              style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);"></textarea>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="CoverImageUrl" class="form-label">Cover Image URL</label>
+                        <input asp-for="CoverImageUrl" class="form-control" placeholder="https://..."
+                               style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="ReleasedDate" class="form-label">Release Date</label>
+                        <input asp-for="ReleasedDate" type="datetime-local" class="form-control"
+                               style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                    </div>
+                </div>
+
+                @if (Model?.Id == 0)
+                {
+                    <div class="mb-3">
+                        <label class="form-label">Upload Pages (Files)</label>
+                        <input type="file" name="pages" class="form-control" multiple accept=".jpg,.jpeg,.png,.webp,.gif"
+                               style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                        <div class="form-text text-muted">Select multiple images. Supported formats: JPG, PNG, WEBP, GIF. Max 10MB per file.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label mb-0">Or Provide Page URLs (Direct Links)</label>
+                            <button type="button" class="btn btn-sm btn-primary" onclick="autoSortUrls()">
+                                <i class="fas fa-sort-numeric-down me-1"></i>Auto Sort URLs
+                            </button>
+                        </div>
+                        <textarea id="pageUrlsTextarea" name="pageUrls" class="form-control" rows="5" placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg"
+                                  style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">@ViewBag.PageUrls</textarea>
+                        <div class="form-text text-muted">One URL per line. These will be added after any uploaded files. You can also paste multiple links per line.</div>
+                    </div>
+                }
+
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save me-2"></i>@(Model?.Id > 0 ? "Update" : "Create") Chapter
+                    </button>
+                    <a href="@Url.Action("ChapterList", "Admin", new { mangaId = manga.Id })" class="btn btn-secondary">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-lg-4">
+            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.5rem;">
+                <h5 style="margin-top: 0;">Chapter Info</h5>
+                <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 8px;">
+                    <p style="margin: 0.3rem 0; font-size: 0.9rem;">
+                        <strong>Number:</strong> <span style="color: var(--primary-light);">@Model?.ChapterNumber</span>
+                    </p>
+                    <p style="margin: 0.3rem 0; font-size: 0.9rem;">
+                        <strong>Title:</strong> @Model?.Title
+                    </p>
+                    <p style="margin: 0.3rem 0; font-size: 0.9rem;">
+                        <strong>Pages:</strong> @(Model?.Pages?.Count ?? 0)
+                    </p>
+                    <p style="margin: 0.3rem 0; font-size: 0.9rem;">
+                        <strong>Views:</strong> <i class="fas fa-eye me-1"></i>@(Model?.ViewCount ?? 0)
+                    </p>
+                    <p style="margin: 0.3rem 0; font-size: 0.9rem;">
+                        <strong>Released:</strong> @(Model?.ReleasedDate.ToString("MMM dd, yyyy") ?? "N/A")
+                    </p>
+                </div>
+
+                @if (Model?.Id > 0)
+                {
+                    <div style="margin-top: 1.5rem;">
+                        <a asp-action="PageList" asp-route-chapterId="@Model.Id" class="btn btn-info w-100">
+                            <i class="fas fa-images me-2"></i>Manage Pages
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

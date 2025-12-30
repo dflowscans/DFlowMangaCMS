@@ -1,0 +1,7 @@
+@model MangaReader.Models.Manga
+
+@{
+    ViewData["Title"] = "Edit Manga";
+}
+
+@await Html.PartialAsync("~/Views/Admin/CreateManga.cshtml", Model)

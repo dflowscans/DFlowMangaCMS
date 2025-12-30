@@ -1,0 +1,88 @@
+@model IEnumerable<MangaReader.Models.Chapter>
+
+@{
+    ViewData["Title"] = "Manage Chapters";
+    var manga = ViewBag.Manga;
+    var mangaId = ViewBag.MangaId;
+}
+
+<div class="container-fluid">
+    <div class="row align-items-center mb-4">
+        <div class="col-md-8">
+            <div class="section-header">
+                <h2>
+                    <a href="@Url.Action("MangaList", "Admin")" style="color: var(--primary-light); text-decoration: none;">Manga</a>
+                    / @manga.Title - Chapters
+                </h2>
+                <div class="section-header-divider"></div>
+            </div>
+        </div>
+        <div class="col-md-4" style="text-align: right;">
+            <a asp-action="CreateChapter" asp-route-mangaId="@mangaId" class="btn btn-success">
+                <i class="fas fa-plus me-2"></i>Add Chapter
+            </a>
+            <a asp-action="MangaList" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Chapters List -->
+    <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden;">
+        @if (Model.Any())
+        {
+            <div style="overflow-x: auto;">
+                <table class="table" style="margin: 0; color: var(--text-primary);">
+                    <thead style="background: var(--bg-tertiary);">
+                        <tr>
+                            <th style="padding: 1rem;">Chapter</th>
+                            <th style="padding: 1rem;">Title</th>
+                            <th style="padding: 1rem;">Pages</th>
+                            <th style="padding: 1rem;">Release Date</th>
+                            <th style="padding: 1rem;">Views</th>
+                            <th style="padding: 1rem;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var chapter in Model)
+                        {
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <td style="padding: 1rem; font-weight: 600; color: var(--primary-light);">@chapter.ChapterNumber</td>
+                                <td style="padding: 1rem;">@chapter.Title</td>
+                                <td style="padding: 1rem;">
+                                    <span style="background: var(--bg-tertiary); padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.85rem;">
+                                        @(chapter.Pages?.Count ?? 0) pages
+                                    </span>
+                                </td>
+                                <td style="padding: 1rem; font-size: 0.9rem; color: var(--text-muted);">
+                                    @chapter.ReleasedDate.ToString("MMM dd, yyyy")
+                                </td>
+                                <td style="padding: 1rem;">
+                                    <i class="fas fa-eye me-1" style="color: var(--primary-light);"></i>@chapter.ViewCount
+                                </td>
+                                <td style="padding: 1rem;">
+                                    <a asp-action="PageList" asp-route-chapterId="@chapter.Id" class="btn btn-sm btn-info" title="Manage pages">
+                                        <i class="fas fa-images"></i>
+                                    </a>
+                                    <a asp-action="EditChapter" asp-route-id="@chapter.Id" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a asp-action="DeleteChapter" asp-route-id="@chapter.Id" class="btn btn-sm btn-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div style="padding: 3rem 1rem; text-align: center; color: var(--text-muted);">
+                <i class="fas fa-inbox" style="font-size: 2rem; display: block; margin-bottom: 0.5rem;"></i>
+                <p>No chapters found. <a href="@Url.Action("CreateChapter", "Admin", new { mangaId })" style="color: var(--primary-light);">Create one</a></p>
+            </div>
+        }
+    </div>
+</div>

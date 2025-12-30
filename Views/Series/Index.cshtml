@@ -1,0 +1,98 @@
+@model IEnumerable<MangaReader.Models.Manga>
+
+@{
+    ViewData["Title"] = "Manga Series";
+}
+
+<div class="container-fluid">
+    <div class="section-header mb-4">
+        <h2>Manga Series</h2>
+        <div class="section-header-divider"></div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <form asp-action="Index" method="get" class="d-flex gap-2">
+                <input type="text" name="search" class="form-control" 
+                       placeholder="Search by title or author..." 
+                       value="@ViewBag.Search" 
+                       style="background: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
+                
+                <select name="status" class="form-select" style="background: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary); max-width: 150px;">
+                    <option value="">All Status</option>
+                    <option value="Ongoing" selected="@(ViewBag.Status == "Ongoing" ? "selected" : "")">Ongoing</option>
+                    <option value="Completed" selected="@(ViewBag.Status == "Completed" ? "selected" : "")">Completed</option>
+                    <option value="Hiatus" selected="@(ViewBag.Status == "Hiatus" ? "selected" : "")">Hiatus</option>
+                </select>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Series Grid -->
+    <div class="row g-4 mb-5">
+        @if (Model.Any())
+        {
+            @foreach (var manga in Model)
+            {
+                <div class="col-lg-3 col-md-4 col-sm-6">
+                    <div class="manga-card">
+                        <div class="manga-card-image">
+                            <img src="@(manga.ImageUrl ?? "/images/default.jpg")" alt="@manga.Title" />
+                            @if (manga.IsFeatured)
+                            {
+                                <div class="manga-card-badge">
+                                    <i class="fas fa-star me-1"></i>Featured
+                                </div>
+                            }
+                            <div class="manga-card-overlay">
+                                <p style="margin: 0; color: var(--text-secondary);">
+                                    <i class="fas fa-book me-1"></i>@(manga.Chapters?.Count ?? 0) chapters
+                                </p>
+                                <p style="margin: 0.5rem 0 0 0; font-size: 0.85rem;">
+                                    Status: <strong>@(manga.Status ?? "Unknown")</strong>
+                                </p>
+                                <p style="margin: 0.5rem 0 0 0; font-size: 0.85rem;">
+                                    <i class="fas fa-star me-1" style="color: var(--accent);"></i>@(manga.Rating ?? 0)/10
+                                </p>
+                            </div>
+                        </div>
+                        <div class="manga-card-body">
+                            <h5 class="manga-card-title">@manga.Title</h5>
+                            <p class="manga-card-meta">
+                                <i class="fas fa-user me-1"></i>@(manga.Author ?? "Unknown")
+                            </p>
+                            @if (!string.IsNullOrEmpty(manga.Genre))
+                            {
+                                <p class="manga-card-genre">
+                                    @manga.Genre.Split(',')[0].Trim()
+                                </p>
+                            }
+                            <a asp-action="Detail" asp-route-id="@manga.Id" class="btn btn-primary btn-sm mt-2 w-100" style="font-size: 0.9rem;">
+                                View Series
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="col-12">
+                <div style="text-align: center; padding: 3rem 1rem;">
+                    <i class="fas fa-search" style="font-size: 3rem; color: var(--text-muted); margin-bottom: 1rem; display: block;"></i>
+                    <p style="color: var(--text-muted); font-size: 1.1rem;">No manga found matching your search.</p>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+    <a>
+        <img src="favicon.ico"/>
+        <h2>Title</h2>
+    </a>
+</div>

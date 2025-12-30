@@ -1,0 +1,44 @@
+@model MangaReader.Models.ChapterPage
+
+@{
+    ViewData["Title"] = "Delete Page";
+}
+
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div style="background: var(--bg-secondary); border: 2px solid var(--accent); border-radius: 10px; padding: 2rem;">
+                <div style="text-align: center; margin-bottom: 2rem;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: var(--accent); display: block; margin-bottom: 1rem;"></i>
+                    <h2 style="margin: 0; color: var(--text-primary);">Delete Page?</h2>
+                </div>
+
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                    Are you sure you want to delete page <strong>@Model.PageNumber</strong> from this chapter?
+                </p>
+
+                <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 2rem;">
+                    <p style="margin: 0.3rem 0; font-size: 0.9rem;">
+                        <strong>Manga:</strong> @(Model.Chapter?.Manga?.Title ?? "Unknown")
+                    </p>
+                    <p style="margin: 0.3rem 0; font-size: 0.9rem;">
+                        <strong>Chapter:</strong> @(Model.Chapter?.ChapterNumber.ToString() ?? "Unknown")
+                    </p>
+                    <p style="margin: 0.3rem 0; font-size: 0.9rem;">
+                        <strong>Page:</strong> @Model.PageNumber
+                    </p>
+                </div>
+
+                <form asp-action="DeletePage" method="post" style="display: flex; gap: 1rem;">
+                    <input type="hidden" asp-for="Id" />
+                    <button type="submit" class="btn btn-danger flex-fill">
+                        <i class="fas fa-trash me-2"></i>Yes, Delete
+                    </button>
+                    <a href="@Url.Action("PageList", "Admin", new { chapterId = Model.ChapterId })" class="btn btn-secondary flex-fill">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
