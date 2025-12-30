@@ -20,7 +20,7 @@
                     </button>
                 }
             </div>
-            <p class="text-white-50 mb-5">Stay updated with the latest changes, features, and fixes on DFlowScans.</p>
+            <p class="text-white-50 mb-5">Stay updated with the latest changes, features, and fixes on YOUR_SITE_NAME.</p>
 
             @if (Model != null && Model.Any())
             {
@@ -102,19 +102,19 @@
                     if (data.following) {
                         btn.classList.remove('btn-primary');
                         btn.classList.add('btn-outline-primary');
+                        text.textContent = 'Unfollow Updates';
                         icon.classList.remove('fa-bell');
                         icon.classList.add('fa-bell-slash');
-                        text.textContent = 'Unfollow Updates';
                     } else {
                         btn.classList.remove('btn-outline-primary');
                         btn.classList.add('btn-primary');
+                        text.textContent = 'Follow Updates';
                         icon.classList.remove('fa-bell-slash');
                         icon.classList.add('fa-bell');
-                        text.textContent = 'Follow Updates';
                     }
                 }
-            } catch (error) {
-                console.error('Error toggling follow status:', error);
+            } catch (err) {
+                console.error('Error toggling follow status:', err);
             }
         }
     </script>
