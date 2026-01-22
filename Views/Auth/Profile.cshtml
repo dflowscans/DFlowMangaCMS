@@ -4,8 +4,8 @@
     var user = ViewBag.User as User;
     var bookmarks = ViewBag.Bookmarks as List<UserBookmark>;
     var currentStatus = ViewBag.CurrentStatus as string;
-    var unlockedDecorations = ViewBag.UnlockedDecorations as List<int> ?? new List<int>();
-    var unlockedTitles = ViewBag.UnlockedTitles as List<int> ?? new List<int>();
+    var unlockedDecorations = ViewBag.UnlockedDecorations as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var unlockedTitles = ViewBag.UnlockedTitles as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
 }
 
 <div class="container-fluid py-4">
@@ -58,26 +58,185 @@
             </div>
             <form asp-action="UpdateProfile" method="post" enctype="multipart/form-data" class="mt-3">
                 @Html.AntiForgeryToken()
-                <div class="row align-items-center">
-                    <div class="col-md-6 mb-3 mb-md-0">
-                        <label class="form-label text-white-50 small mb-1">Update Avatar</label>
-                        <div class="input-group">
-                            <input type="file" name="avatar" accept=".jpg,.jpeg,.png,.webp,.gif" class="form-control" style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);" />
-                            <button type="submit" class="btn btn-primary">Update Profile</button>
+                <div class="row">
+                    <!-- General Settings -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
+                            <div class="card-header" style="background: var(--bg-tertiary); border-bottom: 1px solid var(--border-color);">
+                                <h5 class="mb-0 text-white"><i class="fas fa-cog me-2"></i>General Settings</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label text-white-50 small mb-1">Update Avatar</label>
+                                    <input type="file" name="avatar" accept=".jpg,.jpeg,.png,.webp,.gif" class="form-control" style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);" />
+                                    <small class="text-white-50">Max 5MB. JPG/PNG/WEBP/GIF.</small>
+                                </div>
+                                <div class="form-check form-switch custom-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" name="hideReadingList" id="hideReadingList" value="true" @(user?.HideReadingList == true ? "checked" : "")>
+                                    <label class="form-check-label text-white" for="hideReadingList">
+                                        <i class="fas fa-lock me-1"></i>Hide Reading List from Public
+                                    </label>
+                                </div>
+                                <div class="form-check form-switch custom-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" name="disableFeaturedBanners" id="disableFeaturedBanners" value="true" @(user?.DisableFeaturedBanners == true ? "checked" : "")>
+                                    <label class="form-check-label text-white" for="disableFeaturedBanners">
+                                        <i class="fas fa-image-slash me-1"></i>Disable Featured Banners
+                                    </label>
+                                </div>
+                                <div class="form-check form-switch custom-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" name="showAllFeaturedAsCovers" id="showAllFeaturedAsCovers" value="true" @(user?.ShowAllFeaturedAsCovers == true ? "checked" : "")>
+                                    <label class="form-check-label text-white" for="showAllFeaturedAsCovers">
+                                        <i class="fas fa-th-list me-1"></i>Show All Featured as Vertical Covers
+                                    </label>
+                                </div>
+                                <div class="form-check form-switch custom-switch">
+                                    <input class="form-check-input" type="checkbox" name="ignoreSuggestiveWarnings" id="ignoreSuggestiveWarnings" value="true" @(user?.IgnoreSuggestiveWarnings == true ? "checked" : "")>
+                                    <label class="form-check-label text-white" for="ignoreSuggestiveWarnings">
+                                        <i class="fas fa-exclamation-circle me-1"></i>Ignore Suggestive Warnings
+                                    </label>
+                                </div>
+                            </div>
                         </div>
-                        <small class="text-white-50">Max 5MB. JPG/PNG/WEBP/GIF.</small>
                     </div>
-                    <div class="col-md-6">
-                        <div class="form-check form-switch custom-switch mt-md-4">
-                            <input class="form-check-input" type="checkbox" name="hideReadingList" id="hideReadingList" value="true" @(user?.HideReadingList == true ? "checked" : "")>
-                            <label class="form-check-label text-white" for="hideReadingList">
-                                <i class="fas fa-lock me-1"></i>Hide Reading List from Public
-                            </label>
-                            <p class="text-white-50 small mb-0">When enabled, other users won't see your bookmarks on your public profile.</p>
+
+                    <!-- Appearance Customization -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
+                            <div class="card-header" style="background: var(--bg-tertiary); border-bottom: 1px solid var(--border-color);">
+                                <h5 class="mb-0 text-white"><i class="fas fa-palette me-2"></i>Appearance Customization</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <label class="form-label text-white-50 small">Primary Color</label>
+                                        <input type="color" name="customPrimaryColor" class="form-control form-control-color w-100" value="@(user?.CustomPrimaryColor ?? "#6366f1")" style="background: var(--bg-tertiary); border-color: var(--border-color);">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label text-white-50 small">Accent Color</label>
+                                        <input type="color" name="customAccentColor" class="form-control form-control-color w-100" value="@(user?.CustomAccentColor ?? "#ec4899")" style="background: var(--bg-tertiary); border-color: var(--border-color);">
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label text-white-50 small">Site Opacity (@(user?.SiteOpacity ?? 1.0))</label>
+                                    <input type="range" name="siteOpacity" class="form-range" min="0.1" max="1.0" step="0.05" value="@(user?.SiteOpacity ?? 1.0)">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label text-white-50 small">Custom Background URL</label>
+                                    <input type="text" name="customBackgroundUrl" class="form-control" value="@user?.CustomBackgroundUrl" placeholder="https://example.com/bg.jpg" style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                                </div>
+                                <div class="mb-0">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <label class="form-label text-white-50 small mb-0">Custom CSS</label>
+                                        <div class="d-flex gap-2">
+                                            <button type="button" class="btn btn-link btn-sm p-0 text-info" data-bs-toggle="modal" data-bs-target="#cssGuideModal" title="CSS Guide">
+                                                <i class="fas fa-question-circle me-1"></i>Guide
+                                            </button>
+                                            <a href="@Url.Action("ExportCss", "Auth")" class="btn btn-link btn-sm p-0 text-primary @(string.IsNullOrEmpty(user?.CustomCss) ? "disabled opacity-50" : "")" title="Export CSS">
+                                                <i class="fas fa-file-export me-1"></i>Export
+                                            </a>
+                                            <button type="button" class="btn btn-link btn-sm p-0 text-primary" onclick="document.getElementById('cssImportInput').click()" title="Import CSS">
+                                                <i class="fas fa-file-import me-1"></i>Import
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <textarea name="customCss" class="form-control" rows="3" placeholder=".my-class { color: red; }" style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary); font-family: monospace;">@user?.CustomCss</textarea>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
+                <div class="text-end mb-4">
+                    <button type="submit" class="btn btn-primary px-5 py-2" style="border-radius: 30px; font-weight: 600;">
+                        <i class="fas fa-save me-2"></i>Save All Settings
+                    </button>
+                </div>
             </form>
+
+            <!-- Hidden Import Form -->
+            <form id="importCssForm" asp-action="ImportCss" method="post" enctype="multipart/form-data" style="display: none;">
+                @Html.AntiForgeryToken()
+                <input type="file" id="cssImportInput" name="cssFile" accept=".css" onchange="document.getElementById('importCssForm').submit()">
+            </form>
+
+            <!-- CSS Guide Modal -->
+            <div class="modal fade" id="cssGuideModal" tabindex="-1" aria-labelledby="cssGuideModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                    <div class="modal-content" style="background: var(--bg-secondary); border: 1px solid var(--border-color); color: var(--text-primary);">
+                        <div class="modal-header" style="border-bottom: 1px solid var(--border-color); background: var(--bg-tertiary);">
+                            <h5 class="modal-title" id="cssGuideModalLabel"><i class="fas fa-book me-2"></i>Custom CSS Guide</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <section class="mb-4">
+                                <h6 class="text-info fw-bold mb-2"><i class="fas fa-magic me-2"></i>Global Theme Variables</h6>
+                                <p class="small text-white-50">The easiest way to theme the site is by overriding these variables in the <code>:root</code> selector.</p>
+                                <pre class="bg-dark p-3 rounded border border-secondary shadow-sm"><code class="text-info">:root {
+  --primary-color: #6366f1;   /* Main buttons, links */
+  --accent-color: #ec4899;    /* Highlights, badges */
+  --bg-primary: #0f172a;      /* Main background */
+  --bg-secondary: #1e293b;    /* Cards, containers */
+  --bg-tertiary: #334155;     /* Inputs, headers */
+  --text-primary: #f8fafc;    /* Main text */
+  --text-secondary: #94a3b8;  /* Muted text */
+  --border-color: rgba(255,255,255,0.1);
+}</code></pre>
+                            </section>
+
+                            <section class="mb-4">
+                                <h6 class="text-info fw-bold mb-2"><i class="fas fa-bars me-2"></i>Navigation & Header</h6>
+                                <p class="small text-white-50">Target the top navigation bar and its elements.</p>
+                                <ul class="small list-unstyled ps-3 border-start border-info">
+                                    <li class="mb-1"><code>.navbar</code> - The main top navigation container</li>
+                                    <li class="mb-1"><code>.nav-link</code> - Individual menu items</li>
+                                    <li class="mb-1"><code>.search-input</code> - The search bar field</li>
+                                    <li class="mb-1"><code>.navbar-brand</code> - Site logo/name</li>
+                                </ul>
+                            </section>
+
+                            <section class="mb-4">
+                                <h6 class="text-info fw-bold mb-2"><i class="fas fa-th-large me-2"></i>Manga Cards & Grid</h6>
+                                <p class="small text-white-50">Customize how series look on the home and browse pages.</p>
+                                <ul class="small list-unstyled ps-3 border-start border-info">
+                                    <li class="mb-1"><code>.manga-card</code> - The entire card container</li>
+                                    <li class="mb-1"><code>.manga-card img</code> - The cover image</li>
+                                    <li class="mb-1"><code>.manga-title</code> - The title text</li>
+                                    <li class="mb-1"><code>.badge-chapter</code> - Latest chapter badge</li>
+                                    <li class="mb-1"><code>.manga-status</code> - Status indicators (Ongoing, etc)</li>
+                                </ul>
+                            </section>
+
+                            <section class="mb-4">
+                                <h6 class="text-info fw-bold mb-2"><i class="fas fa-book-open me-2"></i>Reader Page</h6>
+                                <p class="small text-white-50">Styles specifically for when reading chapters.</p>
+                                <ul class="small list-unstyled ps-3 border-start border-info">
+                                    <li class="mb-1"><code>.reader-container</code> - Main area where images are shown</li>
+                                    <li class="mb-1"><code>.chapter-image</code> - Individual page images</li>
+                                    <li class="mb-1"><code>.reader-controls</code> - Top/bottom navigation bars</li>
+                                    <li class="mb-1"><code>.comment-section</code> - The comments area at the bottom</li>
+                                </ul>
+                            </section>
+
+                            <section>
+                                <h6 class="text-info fw-bold mb-2"><i class="fas fa-user me-2"></i>Profile & UI Elements</h6>
+                                <ul class="small list-unstyled ps-3 border-start border-info">
+                                    <li class="mb-1"><code>.gradient-text</code> - Used for main headings</li>
+                                    <li class="mb-1"><code>.card</code> - Standard content containers</li>
+                                    <li class="mb-1"><code>.btn-primary</code> - Main action buttons</li>
+                                    <li class="mb-1"><code>.badge</code> - Various UI labels</li>
+                                </ul>
+                            </section>
+
+                            <div class="mt-4 p-3 rounded bg-info bg-opacity-10 border border-info border-opacity-25">
+                                <small class="d-block text-info fw-bold mb-1"><i class="fas fa-lightbulb me-2"></i>Pro Tip:</small>
+                                <small class="text-white-50">Use <code>!important</code> if your styles aren't applying, e.g., <code>color: red !important;</code>. This ensures your custom style takes priority over the default one.</small>
+                            </div>
+                        </div>
+                        <div class="modal-footer" style="border-top: 1px solid var(--border-color); background: var(--bg-tertiary);">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close Guide</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -110,7 +269,7 @@
                     <div class="card h-100" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
                         <div class="card-header d-flex justify-content-between align-items-center" style="background: var(--bg-tertiary); border-bottom: 1px solid var(--border-color);">
                             <h4 class="mb-0 text-white"><i class="fas fa-pencil-alt me-2"></i>PFP Decorations</h4>
-                            <span class="badge bg-primary">Unlocked: @((ViewBag.AvailableDecorations as List<PfpDecoration>)?.Count(d => (user?.Level >= d.LevelRequirement && !d.IsLocked) || unlockedDecorations.Contains(d.Id)) ?? 0)</span>
+                            <span class="badge bg-primary">Unlocked: @((ViewBag.AvailableDecorations as List<PfpDecoration>)?.Count(d => (user?.Level >= d.LevelRequirement && !d.IsLocked) || unlockedDecorations.Any(ud => ud.DecorationId == d.Id)) ?? 0)</span>
                         </div>
                         <div class="card-body">
                             <div class="decoration-grid">
@@ -126,9 +285,10 @@
                                 {
                                     foreach (var dec in decs)
                                     {
-                                        bool isAwarded = unlockedDecorations.Contains(dec.Id);
-                                        bool isUnlocked = !dec.IsLocked || isAwarded;
-                                        bool canEquip = (user?.Level >= dec.LevelRequirement && !dec.IsLocked) || isAwarded;
+                                        var unlockedInfo = unlockedDecorations.FirstOrDefault(ud => ud.DecorationId == dec.Id);
+                                        bool isAwarded = unlockedInfo != null && unlockedInfo.Origin == UnlockOrigin.AdminAward;
+                                        bool isUnlocked = !dec.IsLocked || unlockedInfo != null;
+                                        bool canEquip = (user?.Level >= dec.LevelRequirement && !dec.IsLocked) || unlockedInfo != null;
                                         
                                         <div class="decoration-item @(user?.EquippedDecorationId == dec.Id ? "active" : "") @(!canEquip ? "locked" : "")" 
                                              onclick="@(canEquip ? $"equipDecoration({dec.Id})" : "")">
@@ -175,7 +335,7 @@
                     <div class="card h-100" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
                         <div class="card-header d-flex justify-content-between align-items-center" style="background: var(--bg-tertiary); border-bottom: 1px solid var(--border-color);">
                             <h4 class="mb-0 text-white"><i class="fas fa-tag me-2"></i>User Titles</h4>
-                            <span class="badge bg-primary">Unlocked: @((ViewBag.AvailableTitles as List<UserTitle>)?.Count(t => (user?.Level >= t.LevelRequirement && !t.IsLocked) || unlockedTitles.Contains(t.Id)) ?? 0)</span>
+                            <span class="badge bg-primary">Unlocked: @((ViewBag.AvailableTitles as List<UserTitle>)?.Count(t => (user?.Level >= t.LevelRequirement && !t.IsLocked) || unlockedTitles.Any(ut => ut.TitleId == t.Id)) ?? 0)</span>
                         </div>
                         <div class="card-body">
                             <div class="title-grid">
@@ -189,9 +349,10 @@
                                 {
                                     foreach (var title in titles)
                                     {
-                                        bool isAwarded = unlockedTitles.Contains(title.Id);
-                                        bool isUnlocked = !title.IsLocked || isAwarded;
-                                        bool canEquip = (user?.Level >= title.LevelRequirement && !title.IsLocked) || isAwarded;
+                                        var unlockedInfo = unlockedTitles.FirstOrDefault(ut => ut.TitleId == title.Id);
+                                        bool isAwarded = unlockedInfo != null && unlockedInfo.Origin == UnlockOrigin.AdminAward;
+                                        bool isUnlocked = !title.IsLocked || unlockedInfo != null;
+                                        bool canEquip = (user?.Level >= title.LevelRequirement && !title.IsLocked) || unlockedInfo != null;
                                         
                                         <div class="title-item @(user?.EquippedTitleId == title.Id ? "active" : "") @(!canEquip ? "locked" : "")" 
                                              onclick="@(canEquip ? $"equipTitle({title.Id})" : "")">

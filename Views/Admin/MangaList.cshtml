@@ -2,22 +2,15 @@
 
 @{
     ViewData["Title"] = "Manage Manga";
+    Layout = "_AdminLayout";
 }
 
-<div class="container-fluid">
-    <div class="row align-items-center mb-4">
-        <div class="col-md-8">
-            <div class="section-header">
-                <h2>Manage Manga</h2>
-                <div class="section-header-divider"></div>
-            </div>
-        </div>
-        <div class="col-md-4" style="text-align: right;">
-            <a asp-action="CreateManga" class="btn btn-success">
-                <i class="fas fa-plus me-2"></i>Add New Manga
-            </a>
-            <a asp-action="Index" class="btn btn-secondary">
-                <i class="fas fa-arrow-left me-2"></i>Dashboard
+<div class="activity-card">
+    <div class="card-header">
+        <h4>Manga Directory</h4>
+        <div class="d-flex gap-2">
+            <a asp-action="CreateManga" class="btn btn-sm btn-success">
+                <i class="fas fa-plus me-1"></i> Add New
             </a>
         </div>
     </div>

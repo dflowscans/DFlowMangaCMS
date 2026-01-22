@@ -9,6 +9,7 @@ public class UserUnlockedDecoration
     public int UserId { get; set; }
     public int DecorationId { get; set; }
     public DateTime UnlockedAt { get; set; } = DateTime.UtcNow;
+    public UnlockOrigin Origin { get; set; } = UnlockOrigin.LevelUnlock;
 
     [ForeignKey("UserId")]
     public virtual User? User { get; set; }

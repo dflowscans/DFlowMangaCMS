@@ -48,7 +48,8 @@ public class AuthController(ApplicationDbContext context, ILogger<AuthController
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new(ClaimTypes.Name, user.Username),
             new("IsAdmin", user.IsAdmin.ToString()),
-            new("IsSubAdmin", user.IsSubAdmin.ToString())
+            new("IsSubAdmin", user.IsSubAdmin.ToString()),
+            new("AvatarUrl", user.AvatarUrl ?? "/img/default-avatar.png")
         };
 
         var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -232,6 +233,11 @@ public class AuthController(ApplicationDbContext context, ILogger<AuthController
             .Where(b => b.UserId == id)
             .ToListAsync();
 
+        // Calculate XP progress
+        int currentLevelXp = (int)(100 * Math.Pow(1.5, user.Level - 1));
+        ViewBag.XpProgress = (double)user.XP / currentLevelXp * 100;
+        ViewBag.XpToNextLevel = currentLevelXp;
+
         ViewBag.User = user;
         ViewBag.Bookmarks = user.HideReadingList ? [] : bookmarks;
         ViewBag.ReadingStats = new
@@ -246,6 +252,18 @@ public class AuthController(ApplicationDbContext context, ILogger<AuthController
 
         // Total comments
         ViewBag.TotalComments = await _context.ChapterComments.CountAsync(c => c.UserId == id);
+
+        // Get unlocked items for public profile
+        ViewBag.UnlockedDecorations = await _context.Set<UserUnlockedDecoration>()
+            .Include(ud => ud.Decoration)
+            .Where(ud => ud.UserId == id)
+            .OrderByDescending(ud => ud.UnlockedAt)
+            .ToListAsync();
+        ViewBag.UnlockedTitles = await _context.Set<UserUnlockedTitle>()
+            .Include(ut => ut.Title)
+            .Where(ut => ut.UserId == id)
+            .OrderByDescending(ut => ut.UnlockedAt)
+            .ToListAsync();
 
         return View();
     }
@@ -293,14 +311,14 @@ public class AuthController(ApplicationDbContext context, ILogger<AuthController
         ViewBag.AvailableDecorations = await _context.PfpDecorations.OrderBy(d => d.LevelRequirement).ToListAsync();
         ViewBag.AvailableTitles = await _context.UserTitles.OrderBy(t => t.LevelRequirement).ToListAsync();
 
-        // Get unlocked items
+        // Get unlocked items with origin
         ViewBag.UnlockedDecorations = await _context.Set<UserUnlockedDecoration>()
             .Where(ud => ud.UserId == userId)
-            .Select(ud => ud.DecorationId)
+            .Select(ud => new { ud.DecorationId, ud.Origin })
             .ToListAsync();
         ViewBag.UnlockedTitles = await _context.Set<UserUnlockedTitle>()
             .Where(ut => ut.UserId == userId)
-            .Select(ut => ut.TitleId)
+            .Select(ut => new { ut.TitleId, ut.Origin })
             .ToListAsync();
 
         // Get bookmarks with manga details (strongly typed)
@@ -329,6 +347,55 @@ public class AuthController(ApplicationDbContext context, ILogger<AuthController
         ViewBag.DroppedCount = _context.UserBookmarks.Count(b => b.UserId == userId && b.Status == BookmarkStatus.Dropped);
 
         return View();
+    }
+
+    [HttpGet]
+    [Authorize]
+    public async Task<IActionResult> ExportCss()
+    {
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null || string.IsNullOrEmpty(user.CustomCss))
+        {
+            TempData["ErrorMessage"] = "You don't have any custom CSS to export.";
+            return RedirectToAction(nameof(Profile));
+        }
+
+        var bytes = System.Text.Encoding.UTF8.GetBytes(user.CustomCss);
+        return File(bytes, "text/css", $"{user.Username}_Custom.css");
+    }
+
+    [HttpPost]
+    [Authorize]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ImportCss(IFormFile cssFile)
+    {
+        if (cssFile == null || cssFile.Length == 0)
+        {
+            TempData["ErrorMessage"] = "Please select a valid CSS file.";
+            return RedirectToAction(nameof(Profile));
+        }
+
+        if (!cssFile.FileName.EndsWith(".css", StringComparison.OrdinalIgnoreCase))
+        {
+            TempData["ErrorMessage"] = "Only .css files are allowed.";
+            return RedirectToAction(nameof(Profile));
+        }
+
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null) return NotFound();
+
+        using (var reader = new System.IO.StreamReader(cssFile.OpenReadStream()))
+        {
+            user.CustomCss = await reader.ReadToEndAsync();
+        }
+
+        user.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        TempData["SuccessMessage"] = "Custom CSS imported successfully.";
+        return RedirectToAction(nameof(Profile));
     }
 
     [HttpGet]
@@ -585,7 +652,7 @@ public class AuthController(ApplicationDbContext context, ILogger<AuthController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> UpdateProfile(IFormFile? avatar, bool hideReadingList)
+    public async Task<IActionResult> UpdateProfile(IFormFile? avatar, bool hideReadingList, string? customPrimaryColor, string? customAccentColor, string? customCss, bool disableFeaturedBanners, bool showAllFeaturedAsCovers, string? customBackgroundUrl, double? siteOpacity, bool ignoreSuggestiveWarnings)
     {
         if (!User.Identity?.IsAuthenticated ?? false)
         {
@@ -629,7 +696,16 @@ public class AuthController(ApplicationDbContext context, ILogger<AuthController
         }
 
         user.HideReadingList = hideReadingList;
+        user.CustomPrimaryColor = customPrimaryColor;
+        user.CustomAccentColor = customAccentColor;
+        user.CustomCss = customCss;
+        user.DisableFeaturedBanners = disableFeaturedBanners;
+        user.ShowAllFeaturedAsCovers = showAllFeaturedAsCovers;
+        user.CustomBackgroundUrl = customBackgroundUrl;
+        user.SiteOpacity = siteOpacity ?? 1.0;
+        user.IgnoreSuggestiveWarnings = ignoreSuggestiveWarnings;
         user.UpdatedAt = DateTime.UtcNow;
+
         await _context.SaveChangesAsync();
         TempData["SuccessMessage"] = "Profile updated successfully.";
         return RedirectToAction(nameof(Profile));

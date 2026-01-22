@@ -1,10 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "Om6Jh3pyvHE=",
+  "dgSpecHash": "spyrgjQs3oc=",
   "success": true,
   "projectFilePath": "C:\\Users\\D_D\\RiderProjects\\DFlowScans\\MangaReader\\MangaReader.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\D_D\\.nuget\\packages\\bcrypt.net-next\\4.0.3\\bcrypt.net-next.4.0.3.nupkg.sha512",
+    "C:\\Users\\D_D\\.nuget\\packages\\htmlagilitypack\\1.12.4\\htmlagilitypack.1.12.4.nupkg.sha512",
     "C:\\Users\\D_D\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
     "C:\\Users\\D_D\\.nuget\\packages\\markdig\\0.44.0\\markdig.0.44.0.nupkg.sha512",
     "C:\\Users\\D_D\\.nuget\\packages\\microsoft.bcl.asyncinterfaces\\7.0.0\\microsoft.bcl.asyncinterfaces.7.0.0.nupkg.sha512",

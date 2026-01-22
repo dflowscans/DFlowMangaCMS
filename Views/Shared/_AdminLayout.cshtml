@@ -1,0 +1,386 @@
+@using Microsoft.EntityFrameworkCore
+@using MangaReader.Models
+@inject MangaReader.Data.ApplicationDbContext _context
+
+@{
+    User? currentUser = null;
+    if (User.Identity?.IsAuthenticated ?? false)
+    {
+        var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (int.TryParse(userIdStr, out var userId))
+        {
+            try {
+                currentUser = _context.Users.FirstOrDefault(u => u.Id == userId);
+            } catch {
+                // If the table schema is outdated, we'll fall back to no user settings
+                // This allows the admin to still access the dashboard to fix the database
+            }
+        }
+    }
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>@ViewData["Title"] - Admin Panel</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true"/>
+    <style>
+        @if (currentUser != null)
+        {
+            <text>
+            :root {
+                @if (!string.IsNullOrEmpty(currentUser.CustomPrimaryColor))
+                {
+                    <text>--primary-color: @currentUser.CustomPrimaryColor !important;</text>
+                    <text>--primary-light: @currentUser.CustomPrimaryColor !important;</text>
+                    <text>--primary-dark: @currentUser.CustomPrimaryColor !important;</text>
+                }
+                @if (!string.IsNullOrEmpty(currentUser.CustomAccentColor))
+                {
+                    <text>--accent: @currentUser.CustomAccentColor !important;</text>
+                }
+            }
+
+            @if (!string.IsNullOrEmpty(currentUser.CustomBackgroundUrl))
+            {
+                <text>
+                body {
+                    background-image: url('@currentUser.CustomBackgroundUrl') !important;
+                    background-attachment: fixed !important;
+                    background-size: cover !important;
+                    background-position: center !important;
+                }
+                .admin-dashboard-wrapper::before {
+                    content: none !important;
+                }
+                </text>
+            }
+
+            @if (currentUser.SiteOpacity.HasValue && currentUser.SiteOpacity.Value < 1.0)
+            {
+                <text>
+                .admin-sidebar, .admin-header, .admin-card, .dropdown-menu, .modal-content {
+                    opacity: @currentUser.SiteOpacity.Value !important;
+                }
+                </text>
+            }
+
+            @if (!string.IsNullOrEmpty(currentUser.CustomCss))
+            {
+                @Html.Raw(currentUser.CustomCss)
+            }
+            </text>
+        }
+    </style>
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body class="admin-body">
+    <div class="admin-dashboard-wrapper">
+        <!-- Sidebar -->
+        <div class="admin-sidebar">
+            <div class="sidebar-brand">
+                <i class="fas fa-shield-alt"></i>
+                <span>DFlow Admin</span>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="@Url.Action("Index", "Admin")" class="nav-item @(ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")">
+                    <i class="fas fa-th-large"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="@Url.Action("MangaList", "Admin")" class="nav-item @(ViewContext.RouteData.Values["action"]?.ToString() == "MangaList" ? "active" : "")">
+                    <i class="fas fa-book"></i>
+                    <span>Manage Manga</span>
+                </a>
+                <a href="@Url.Action("CreateManga", "Admin")" class="nav-item @(ViewContext.RouteData.Values["action"]?.ToString() == "CreateManga" ? "active" : "")">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Add New Manga</span>
+                </a>
+                <a href="@Url.Action("ManageUsers", "Admin")" class="nav-item @(ViewContext.RouteData.Values["action"]?.ToString() == "ManageUsers" ? "active" : "")">
+                    <i class="fas fa-users"></i>
+                    <span>Users</span>
+                </a>
+                <a href="@Url.Action("ManageDecorations", "Admin")" class="nav-item @(ViewContext.RouteData.Values["action"]?.ToString() == "ManageDecorations" ? "active" : "")">
+                    <i class="fas fa-paint-brush"></i>
+                    <span>Decorations</span>
+                </a>
+                <a href="@Url.Action("ManageTitles", "Admin")" class="nav-item @(ViewContext.RouteData.Values["action"]?.ToString() == "ManageTitles" ? "active" : "")">
+                    <i class="fas fa-heading"></i>
+                    <span>Titles</span>
+                </a>
+                <a href="@Url.Action("BloggerImport", "Admin")" class="nav-item @(ViewContext.RouteData.Values["action"]?.ToString() == "BloggerImport" ? "active" : "")">
+                    <i class="fab fa-blogger"></i>
+                    <span>Blogger Chapters</span>
+                </a>
+                <a href="@Url.Action("BloggerSeriesImport", "Admin")" class="nav-item @(ViewContext.RouteData.Values["action"]?.ToString() == "BloggerSeriesImport" ? "active" : "")">
+                    <i class="fas fa-magic"></i>
+                    <span>Blogger Series</span>
+                </a>
+                <div class="nav-divider"></div>
+                <a href="@Url.Action("DatabaseManagement", "Admin")" class="nav-item @(ViewContext.RouteData.Values["action"]?.ToString() == "DatabaseManagement" ? "active" : "")">
+                    <i class="fas fa-database"></i>
+                    <span>Database</span>
+                </a>
+                <a href="/" class="nav-item">
+                    <i class="fas fa-external-link-alt"></i>
+                    <span>View Site</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="admin-main">
+            <header class="admin-header">
+                <div class="header-left">
+                    <div class="dashboard-title">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Dashboard Statistics</span>
+                    </div>
+                </div>
+
+                <div class="header-center">
+                    <nav class="compact-nav">
+                        <a href="/">Home</a>
+                        <a href="/Series">Series</a>
+                        <a href="/Community">Community</a>
+                    </nav>
+                </div>
+
+                <div class="header-right">
+                    <form method="get" action="@Url.Action("Index", "Admin")" class="time-period-form">
+                        <span class="period-label">Time Period:</span>
+                        <select name="period" onchange="this.form.submit()">
+                            <option value="Daily" selected="@(ViewBag.CurrentPeriod == "Daily")">Daily</option>
+                            <option value="Weekly" selected="@(ViewBag.CurrentPeriod == "Weekly")">Weekly</option>
+                            <option value="Monthly" selected="@(ViewBag.CurrentPeriod == "Monthly")">Monthly</option>
+                            <option value="Yearly" selected="@(ViewBag.CurrentPeriod == "Yearly")">Yearly</option>
+                        </select>
+                        <button type="submit" class="btn-refresh">
+                            <i class="fas fa-sync-alt"></i>
+                            <span>Refresh</span>
+                        </button>
+                    </form>
+
+                    <div class="admin-header-actions">
+                        <!-- Notification Bell -->
+                        <div class="admin-notifications dropdown">
+                            <a href="#" class="notification-trigger" id="adminNotificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-bell"></i>
+                                <span id="notificationBadge" class="notification-dot d-none">0</span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end p-0 shadow-lg border-0 admin-notif-dropdown" aria-labelledby="adminNotificationDropdown">
+                                <li class="p-3 border-bottom d-flex justify-content-between align-items-center dropdown-notif-header">
+                                    <h6 class="mb-0 text-white fw-bold">Notifications</h6>
+                                    <button class="btn btn-sm btn-link text-decoration-none p-0" id="markAllReadBtn">Mark all as read</button>
+                                </li>
+                                <li class="p-0 border-bottom dropdown-notif-tabs">
+                                    <div class="d-flex w-100">
+                                        <button class="btn btn-sm flex-grow-1 text-white rounded-0 py-2 notif-tab active-notif-tab" id="tabSeries" onclick="switchNotifTab('series', event)">Series</button>
+                                        <button class="btn btn-sm flex-grow-1 text-white rounded-0 py-2 notif-tab" id="tabCommunity" onclick="switchNotifTab('community', event)">Community</button>
+                                        <button class="btn btn-sm flex-grow-1 text-white rounded-0 py-2 notif-tab" id="tabSystem" onclick="switchNotifTab('system', event)">System</button>
+                                    </div>
+                                </li>
+                                <div id="notificationList" class="notification-scroll-area">
+                                    <li class="p-4 text-center text-white">Loading...</li>
+                                </div>
+                            </ul>
+                        </div>
+                        
+                        <!-- Profile Dropdown -->
+                        <div class="admin-profile-dropdown dropdown">
+                            <div class="admin-profile-trigger" id="adminUserDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-user"></i>
+                                <span class="admin-name">@User.Identity?.Name</span>
+                                <span id="navUserLevel" class="admin-level-badge" style="display: none;">Lvl 1</span>
+                            </div>
+                            <ul class="dropdown-menu dropdown-menu-end admin-dropdown-menu" aria-labelledby="adminUserDropdown">
+                                <li>
+                                    <a class="dropdown-item" href="@Url.Action("Profile", "Auth")">
+                                        <i class="fas fa-id-card"></i>
+                                        <span>My Profile</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="@Url.Action("Bookmarks", "Series")">
+                                        <i class="fas fa-bookmark"></i>
+                                        <span>My Bookmarks</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="@Url.Action("ChangePassword", "Auth")">
+                                        <i class="fas fa-key"></i>
+                                        <span>Change Password</span>
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form asp-controller="Auth" asp-action="Logout" method="post">
+                                        <button type="submit" class="dropdown-item">
+                                            <i class="fas fa-sign-out-alt"></i>
+                                            <span>Logout</span>
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="admin-content">
+                @if (TempData["SuccessMessage"] != null)
+                {
+                    <div class="alert alert-success alert-dismissible fade show mb-4" role="alert" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2); color: #10b981; border-radius: 12px;">
+                        <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+                @if (TempData["ErrorMessage"] != null)
+                {
+                    <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: #ef4444; border-radius: 12px;">
+                        <i class="fas fa-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+
+                @RenderBody()
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    @if (User.Identity?.IsAuthenticated ?? false)
+    {
+        <script>
+            async function updateNavLevel() {
+                try {
+                    const resp = await fetch('@Url.Action("GetUserInfo", "Auth")');
+                    const data = await resp.json();
+                    if (data.success) {
+                        const levelEl = document.getElementById('navUserLevel');
+                        if (levelEl) {
+                            levelEl.textContent = 'Lvl ' + data.level;
+                            levelEl.style.display = 'inline-block';
+                            levelEl.title = `${data.xp} / ${data.xpNeeded} XP`;
+                        }
+                    }
+                } catch (e) { console.error("Failed to fetch user level", e); }
+            }
+            updateNavLevel();
+
+            let currentNotifTab = 'series';
+
+            function switchNotifTab(tab, event) {
+                if (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                currentNotifTab = tab;
+                
+                const tabs = document.querySelectorAll('.notif-tab');
+                tabs.forEach(t => t.classList.remove('active-notif-tab'));
+                
+                const activeTab = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
+                if (activeTab) {
+                    activeTab.classList.add('active-notif-tab');
+                }
+                
+                loadNotifications();
+            }
+
+            async function loadNotifications() {
+                try {
+                    const resp = await fetch('@Url.Action("GetNotifications", "Notification")');
+                    const data = await resp.json();
+                    if (data.success) {
+                        const badge = document.getElementById('notificationBadge');
+                        const list = document.getElementById('notificationList');
+                        
+                        if (data.unreadCount > 0) {
+                            badge.textContent = data.unreadCount > 99 ? '99+' : data.unreadCount;
+                            badge.classList.remove('d-none');
+                        } else {
+                            badge.classList.add('d-none');
+                        }
+
+                        const filtered = (data.notifications || []).filter(n => {
+                            if (currentNotifTab === 'series') return n.type === 0;
+                            if (currentNotifTab === 'community') return n.type === 1;
+                            if (currentNotifTab === 'system') return n.type === 2 || n.type === 3;
+                            return false;
+                        });
+
+                        if (filtered.length > 0) {
+                            list.innerHTML = filtered.map(n => {
+                                const date = new Date(n.createdAt).toLocaleDateString();
+                                const url = n.relatedChapterId ? `/Series/ReadChapter/${n.relatedChapterId}` : '#';
+                                const isUnread = !n.isRead;
+                                return `
+                                    <li class="notification-item p-3 border-bottom d-flex align-items-start gap-3 ${isUnread ? 'unread' : ''}" style="border-color: rgba(255,255,255,0.05) !important; cursor: pointer; transition: all 0.2s ease;" onclick="location.href='${url}'">
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <p class="mb-1 text-white small" style="font-weight: ${isUnread ? '600' : '400'}; opacity: ${isUnread ? '1' : '0.7'};">${n.message}</p>
+                                                <div class="d-flex gap-2">
+                                                    ${isUnread ? `<button class="btn btn-sm p-0 mark-read-btn" onclick="event.stopPropagation(); markAsRead(${n.id})" title="Mark as read"><i class="fas fa-circle text-primary" style="font-size: 0.5rem;"></i></button>` : ''}
+                                                    <button class="btn btn-sm p-0 text-white-50 hover-text-danger" onclick="event.stopPropagation(); deleteNotification(${n.id})" title="Delete"><i class="fas fa-trash-alt" style="font-size: 0.8rem;"></i></button>
+                                                </div>
+                                            </div>
+                                            <span class="text-muted" style="font-size: 0.7rem;">${date}</span>
+                                        </div>
+                                    </li>
+                                `;
+                            }).join('');
+                        } else {
+                            list.innerHTML = `<li class="p-4 text-center text-white" style="font-size: 0.9rem; opacity: 0.6;">No ${currentNotifTab} notifications.</li>`;
+                        }
+                    }
+                } catch (e) { console.error("Failed to load notifications", e); }
+            }
+
+            window.markAsRead = async function(id) {
+                try {
+                    const resp = await fetch(`/Notification/MarkAsRead/${id}`, { method: 'POST' });
+                    const data = await resp.json();
+                    if (data.success) {
+                        loadNotifications();
+                    }
+                } catch (e) { console.error("Failed to mark notification as read", e); }
+            }
+
+            window.deleteNotification = async function(id) {
+                try {
+                    const resp = await fetch(`/Notification/Delete/${id}`, { method: 'POST' });
+                    const data = await resp.json();
+                    if (data.success) {
+                        loadNotifications();
+                    }
+                } catch (e) { console.error("Failed to delete notification", e); }
+            }
+
+            const markAllBtn = document.getElementById('markAllReadBtn');
+            if (markAllBtn) {
+                markAllBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    try {
+                        const resp = await fetch(`@Url.Action("MarkAllAsRead", "Notification")?tab=${currentNotifTab}`, { method: 'POST' });
+                        const data = await resp.json();
+                        if (data.success) {
+                            loadNotifications();
+                        }
+                    } catch (e) { console.error("Failed to mark all as read", e); }
+                });
+            }
+
+            loadNotifications();
+            setInterval(loadNotifications, 60000); // Refresh every minute
+        </script>
+    }
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

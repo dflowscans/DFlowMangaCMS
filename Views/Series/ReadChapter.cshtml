@@ -1,10 +1,18 @@
 @model MangaReader.Models.Chapter
+@using Microsoft.EntityFrameworkCore
+@inject MangaReader.Data.ApplicationDbContext _context
 
 @{ 
     ViewData["Title"] = $"Chapter {Model.ChapterNumber} - {Model.Manga?.Title}";
     var currentUserIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0";
     var currentUserId = int.TryParse(currentUserIdStr, out var uid) ? uid : 0;
     var isAdmin = (User.FindFirst("IsAdmin")?.Value == "True") || (User.FindFirst("IsSubAdmin")?.Value == "True");
+
+    User? currentUser = null;
+    if (currentUserId > 0)
+    {
+        currentUser = _context.Users.FirstOrDefault(u => u.Id == currentUserId);
+    }
 }
 
 <style>
@@ -146,6 +154,8 @@
                     <i class="fas fa-eye ms-3 me-1"></i>@Model.ViewCount views
                 </p>
             </div>
+
+
             <div class="col-md-4" style="text-align: right;">
                 <a href="@Url.Action("Detail", "Series", new { id = Model.Manga?.Id ?? 0 })" class="btn btn-secondary">
                     <i class="fas fa-arrow-left me-1"></i>Back to Series
@@ -154,41 +164,30 @@
         </div>
     </div>
 
-    <!-- Chapter Navigation -->
-    <div class="row mb-3" style="align-items: center;">
-        <div class="col-md-4">
-            @if (Model.Manga?.Chapters != null && Model.Manga.Chapters.Any(c => c.ChapterNumber < Model.ChapterNumber))
-            {
-                var prevChapter = Model.Manga.Chapters.Where(c => c.ChapterNumber < Model.ChapterNumber).OrderByDescending(c => c.ChapterNumber).First();
-                <a href="@Url.Action("ReadChapter", "Series", new { id = prevChapter.Id })" class="btn btn-primary w-100">
-                    <i class="fas fa-arrow-left me-2"></i>Previous Chapter
-                </a>
-            }
-        </div>
-        <div class="col-md-4" style="text-align: center;">
-            <select class="form-select" style="background: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);" onchange="if(this.value) window.location.href=this.value">
-                <option value="" disabled selected>Select Chapter...</option>
-                @foreach (var ch in Model.Manga?.Chapters?.OrderByDescending(c => c.ChapterNumber) ?? Enumerable.Empty<MangaReader.Models.Chapter>())
-                {
-                    <option value="@Url.Action("ReadChapter", "Series", new { id = ch.Id })" selected="@(ch.Id == Model.Id ? "selected" : "")">
-                        Chapter @ch.ChapterNumber @(string.IsNullOrEmpty(ch.Title) ? "" : "- " + ch.Title)
-                    </option>
-                }
-            </select>
-        </div>
-        <div class="col-md-4" style="text-align: right;">
-            @if (Model.Manga?.Chapters != null && Model.Manga.Chapters.Any(c => c.ChapterNumber > Model.ChapterNumber))
-            {
-                var nextChapter = Model.Manga.Chapters.Where(c => c.ChapterNumber > Model.ChapterNumber).OrderBy(c => c.ChapterNumber).First();
-                <a href="@Url.Action("ReadChapter", "Series", new { id = nextChapter.Id })" class="btn btn-primary w-100">
-                    Next Chapter <i class="fas fa-arrow-right ms-2"></i>
-                </a>
-            }
-        </div>
-    </div>
 
     <!-- Reader -->
-    <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem;">
+    <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; position: relative;">
+        @if (Model.Manga?.IsSuggestive == true && currentUser?.IgnoreSuggestiveWarnings != true)
+        {
+            <div id="suggestiveOverlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; z-index: 100; backdrop-filter: blur(15px); transition: opacity 0.5s ease;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 4rem; color: #ffc107; margin-bottom: 20px;"></i>
+                <h2 style="color: #fff; font-size: 1.8rem; margin-bottom: 15px; font-weight: 700;">Content Warning</h2>
+                <p style="color: #ccc; font-size: 1.1rem; max-width: 500px; margin-bottom: 30px;">This chapter contains content that may not be suitable for all audiences, including <strong>nudity</strong> or suggestive themes. Are you sure you want to continue?</p>
+                <div style="display: flex; gap: 1rem;">
+                    <a href="@Url.Action("Detail", "Series", new { id = Model.Manga.Id })" class="btn btn-lg btn-secondary" style="border-radius: 30px; padding: 10px 30px;">Go Back</a>
+                    <button class="btn btn-lg btn-warning" onclick="hideSuggestive()" style="border-radius: 30px; padding: 10px 30px; font-weight: 600; background: #ffc107; color: #000; border: none;">Continue Reading</button>
+                </div>
+            </div>
+            <script>
+                function hideSuggestive() {
+                    const overlay = document.getElementById('suggestiveOverlay');
+                    if (overlay) {
+                        overlay.style.opacity = '0';
+                        setTimeout(() => overlay.style.display = 'none', 500);
+                    }
+                }
+            </script>
+        }
         @if (Model.Pages?.Any() == true)
         {
             <div class="reader-toolbar" style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; padding: 0.5rem 0.5rem 1rem 0.5rem;">
@@ -272,6 +271,38 @@
                 <p style="color: var(--text-muted);">No pages available for this chapter yet.</p>
             </div>
         }
+    </div>
+
+    <!-- Chapter Navigation -->
+    <div class="row mt-4 mb-3" style="align-items: center;">
+        <div class="col-md-4">
+            @if (Model.Manga?.Chapters != null && Model.Manga.Chapters.Any(c => c.ChapterNumber < Model.ChapterNumber))
+            {
+                var prevChapter = Model.Manga.Chapters.Where(c => c.ChapterNumber < Model.ChapterNumber).OrderByDescending(c => c.ChapterNumber).First();
+                <a href="@Url.Action("ReadChapter", "Series", new { id = prevChapter.Id })" class="btn btn-primary w-100">
+                    <i class="fas fa-arrow-left me-2"></i>Previous Chapter
+                </a>
+            }
+        </div>
+        <div class="col-md-4" style="text-align: center;">
+            <select class="form-select" style="background: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary); font-weight: 600;" onchange="if(this.value) window.location.href=this.value">
+                @foreach (var ch in Model.Manga?.Chapters?.OrderByDescending(c => c.ChapterNumber) ?? Enumerable.Empty<MangaReader.Models.Chapter>())
+                {
+                    <option value="@Url.Action("ReadChapter", "Series", new { id = ch.Id })" selected="@(ch.Id == Model.Id ? "selected" : null)">
+                        Chapter @ch.ChapterNumber @(string.IsNullOrEmpty(ch.Title) ? "" : "- " + ch.Title) @(ch.Id == Model.Id ? "(Reading)" : "")
+                    </option>
+                }
+            </select>
+        </div>
+        <div class="col-md-4" style="text-align: right;">
+            @if (Model.Manga?.Chapters != null && Model.Manga.Chapters.Any(c => c.ChapterNumber > Model.ChapterNumber))
+            {
+                var nextChapter = Model.Manga.Chapters.Where(c => c.ChapterNumber > Model.ChapterNumber).OrderBy(c => c.ChapterNumber).First();
+                <a href="@Url.Action("ReadChapter", "Series", new { id = nextChapter.Id })" class="btn btn-primary w-100">
+                    Next Chapter <i class="fas fa-arrow-right ms-2"></i>
+                </a>
+            }
+        </div>
     </div>
 
     @{
@@ -378,6 +409,19 @@
                                         <div style="display: flex; gap: 0.5rem; align-items: center;">
                                             @if (User.Identity?.IsAuthenticated ?? false)
                                             {
+                                                <div class="d-flex align-items-center me-2" style="background: var(--bg-tertiary); border-radius: 20px; padding: 2px 8px; border: 1px solid var(--border-color);">
+                        <button id="like-btn-@c.Id" class="btn btn-sm btn-link p-0 text-decoration-none me-2 reaction-btn @(c.Reactions?.Any(r => r.UserId == currentUserId && r.IsLike) == true ? "text-primary" : "text-muted")" 
+                                onclick="reactToComment(@c.Id, true)" title="Like" @(currentUserId == 0 ? "disabled" : "")>
+                            <i class="fas fa-thumbs-up"></i>
+                            <span id="like-count-@c.Id" class="ms-1 like-count" style="font-size: 0.8rem;">@(c.Reactions?.Count(r => r.IsLike) ?? 0)</span>
+                        </button>
+                        <div style="width: 1px; height: 12px; background: var(--border-color); margin: 0 4px;"></div>
+                        <button id="dislike-btn-@c.Id" class="btn btn-sm btn-link p-0 text-decoration-none ms-2 reaction-btn @(c.Reactions?.Any(r => r.UserId == currentUserId && !r.IsLike) == true ? "text-danger" : "text-muted")" 
+                                onclick="reactToComment(@c.Id, false)" title="Dislike" @(currentUserId == 0 ? "disabled" : "")>
+                            <i class="fas fa-thumbs-down"></i>
+                            <span id="dislike-count-@c.Id" class="ms-1 dislike-count" style="font-size: 0.8rem;">@(c.Reactions?.Count(r => !r.IsLike) ?? 0)</span>
+                        </button>
+                    </div>
                                                 <button class="btn btn-sm btn-link text-primary p-0 text-decoration-none" onclick="showReplyForm(@c.Id)">
                                                     <i class="fas fa-reply me-1"></i>Reply
                                                 </button>
@@ -387,6 +431,20 @@
                                                         <i class="fas fa-edit me-1"></i>Edit
                                                     </button>
                                                 }
+                                            }
+                                            else
+                                            {
+                                                <div class="d-flex align-items-center me-2" style="background: var(--bg-tertiary); border-radius: 20px; padding: 2px 8px; border: 1px solid var(--border-color); opacity: 0.7;">
+                                                    <span class="text-muted me-2" title="Log in to like">
+                                                        <i class="fas fa-thumbs-up"></i>
+                                                        <span class="ms-1" style="font-size: 0.8rem;">@(c.Reactions?.Count(r => r.IsLike) ?? 0)</span>
+                                                    </span>
+                                                    <div style="width: 1px; height: 12px; background: var(--border-color); margin: 0 4px;"></div>
+                                                    <span class="text-muted ms-2" title="Log in to dislike">
+                                                        <i class="fas fa-thumbs-down"></i>
+                                                        <span class="ms-1" style="font-size: 0.8rem;">@(c.Reactions?.Count(r => !r.IsLike) ?? 0)</span>
+                                                    </span>
+                                                </div>
                                             }
                                             @if (isAdmin || (currentUserId != 0 && currentUserId == c.UserId))
                                             {
@@ -467,8 +525,8 @@
                                                             }
                                                             @if (r.User?.EquippedTitle != null && ViewBag.EnableTitles == "true")
                                                             {
-                                                                <span class="badge ms-1" style="background: rgba(0,0,0,0.4); border: 1px solid @(r.User.EquippedTitle.Color ?? "transparent"); color: @(r.User.EquippedTitle.Color ?? "inherit"); font-weight: bold; font-size: 0.65rem; padding: 1px 4px; vertical-align: middle;">
-                                                                    @r.User.EquippedTitle.Name
+                                                                <span class="badge ms-1" style="background: rgba(0,0,0,0.4); border: 1px solid @(r.User?.EquippedTitle?.Color ?? "transparent"); color: @(r.User?.EquippedTitle?.Color ?? "inherit"); font-weight: bold; font-size: 0.65rem; padding: 1px 4px; vertical-align: middle;">
+                                                                    @(r.User?.EquippedTitle?.Name ?? "")
                                                                 </span>
                                                             }
                                                             <span style="font-size: 0.7rem; color: var(--text-muted); margin-left: 8px;">
@@ -478,6 +536,19 @@
                                                     <div style="display: flex; gap: 0.5rem; align-items: center;">
                                                         @if (User.Identity?.IsAuthenticated ?? false)
                                                         {
+                                                            <div class="d-flex align-items-center me-2" style="background: var(--bg-tertiary); border-radius: 20px; padding: 1px 6px; border: 1px solid var(--border-color);">
+                                                                <button id="like-btn-@r.Id" class="btn btn-sm btn-link p-0 text-decoration-none me-2 reaction-btn @(r.Reactions?.Any(re => re.UserId == currentUserId && re.IsLike) == true ? "text-primary" : "text-muted")" 
+                                                                        onclick="reactToComment(@r.Id, true)" style="font-size: 0.75rem;" title="Like" @(currentUserId == 0 ? "disabled" : "")>
+                                                                    <i class="fas fa-thumbs-up"></i>
+                                                                    <span id="like-count-@r.Id" class="ms-1 like-count">@(r.Reactions?.Count(re => re.IsLike) ?? 0)</span>
+                                                                </button>
+                                                                <div style="width: 1px; height: 10px; background: var(--border-color); margin: 0 2px;"></div>
+                                                                <button id="dislike-btn-@r.Id" class="btn btn-sm btn-link p-0 text-decoration-none ms-2 reaction-btn @(r.Reactions?.Any(re => re.UserId == currentUserId && !re.IsLike) == true ? "text-danger" : "text-muted")" 
+                                                                        onclick="reactToComment(@r.Id, false)" style="font-size: 0.75rem;" title="Dislike" @(currentUserId == 0 ? "disabled" : "")>
+                                                                    <i class="fas fa-thumbs-down"></i>
+                                                                    <span id="dislike-count-@r.Id" class="ms-1 dislike-count">@(r.Reactions?.Count(re => !re.IsLike) ?? 0)</span>
+                                                                </button>
+                                                            </div>
                                                             <button class="btn btn-sm btn-link text-primary p-0 text-decoration-none" style="font-size: 0.8rem;" onclick="showReplyForm(@r.Id)">
                                                                 <i class="fas fa-reply me-1"></i>Reply
                                                             </button>
@@ -487,6 +558,20 @@
                                                                     <i class="fas fa-edit me-1"></i>Edit
                                                                 </button>
                                                             }
+                                                        }
+                                                        else
+                                                        {
+                                                            <div class="d-flex align-items-center me-2" style="background: var(--bg-tertiary); border-radius: 20px; padding: 1px 6px; border: 1px solid var(--border-color); opacity: 0.7;">
+                                                                <span class="text-muted me-2" style="font-size: 0.75rem;" title="Log in to like">
+                                                                    <i class="fas fa-thumbs-up"></i>
+                                                                    <span class="ms-1">@(r.Reactions?.Count(re => re.IsLike) ?? 0)</span>
+                                                                </span>
+                                                                <div style="width: 1px; height: 10px; background: var(--border-color); margin: 0 2px;"></div>
+                                                                <span class="text-muted ms-2" style="font-size: 0.75rem;" title="Log in to dislike">
+                                                                    <i class="fas fa-thumbs-down"></i>
+                                                                    <span class="ms-1">@(r.Reactions?.Count(re => !re.IsLike) ?? 0)</span>
+                                                                </span>
+                                                            </div>
                                                         }
                                                         @if (isAdmin || (currentUserId != 0 && currentUserId == r.UserId))
                                                         {

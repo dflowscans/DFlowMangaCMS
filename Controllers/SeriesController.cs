@@ -22,37 +22,152 @@ public class SeriesController : Controller
     }
 
     // GET: Series
-    public async Task<IActionResult> Index(string search = "", string genre = "", string status = "")
+    public async Task<IActionResult> Index(
+        string search = "", 
+        string sortBy = "Default",
+        string types = "Any",
+        string genres = "",
+        string excludedGenres = "",
+        string demographic = "Any",
+        string releaseStatus = "Any",
+        int? minChapters = null,
+        int? yearFrom = null,
+        int? yearTo = null,
+        string author = "",
+        string artist = "")
     {
-        var manga = _context.Mangas
+        var query = _context.Mangas
             .Include(m => m.Chapters)
             .AsQueryable();
 
         // Search filter
         if (!string.IsNullOrEmpty(search))
         {
-            manga = manga.Where(m => m.Title.Contains(search) || m.Author.Contains(search));
+            query = query.Where(m => m.Title.Contains(search) || m.Author.Contains(search) || m.Artist.Contains(search));
         }
 
-        // Genre filter
-        if (!string.IsNullOrEmpty(genre))
+        // Author filter
+        if (!string.IsNullOrEmpty(author) && author != "Any")
         {
-            manga = manga.Where(m => m.Genre.Contains(genre));
+            query = query.Where(m => m.Author.Contains(author));
         }
 
-        // Status filter
-        if (!string.IsNullOrEmpty(status))
+        // Artist filter
+        if (!string.IsNullOrEmpty(artist) && artist != "Any")
         {
-            manga = manga.Where(m => m.Status == status);
+            query = query.Where(m => m.Artist.Contains(artist));
         }
 
-        var result = await manga.OrderByDescending(m => m.UpdatedAt).ToListAsync();
+        // Types filter
+        if (!string.IsNullOrEmpty(types) && types != "Any")
+        {
+            query = query.Where(m => m.Type == types);
+        }
+
+        // Demographic filter
+        if (!string.IsNullOrEmpty(demographic) && demographic != "Any")
+        {
+            query = query.Where(m => m.Status.Contains(demographic) || m.Genre.Contains(demographic));
+        }
+
+        // Release Status filter
+        if (!string.IsNullOrEmpty(releaseStatus) && releaseStatus != "Any")
+        {
+            query = query.Where(m => m.Status == releaseStatus);
+        }
+
+        // Year From
+        if (yearFrom.HasValue)
+        {
+            query = query.Where(m => m.CreatedAt.Year >= yearFrom.Value);
+        }
+
+        // Year To
+        if (yearTo.HasValue)
+        {
+            query = query.Where(m => m.CreatedAt.Year <= yearTo.Value);
+        }
+
+        // Min Chapters
+        if (minChapters.HasValue)
+        {
+            query = query.Where(m => m.Chapters.Count >= minChapters.Value);
+        }
+
+        // Genre filter (Included)
+        if (!string.IsNullOrEmpty(genres))
+        {
+            var includedList = genres.Split(',', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var g in includedList)
+            {
+                query = query.Where(m => m.Genre.Contains(g.Trim()));
+            }
+        }
+
+        // Genre filter (Excluded)
+        if (!string.IsNullOrEmpty(excludedGenres))
+        {
+            var excludedList = excludedGenres.Split(',', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var g in excludedList)
+            {
+                query = query.Where(m => !m.Genre.Contains(g.Trim()));
+            }
+        }
+
+        // Sorting
+        query = sortBy switch
+        {
+            "Newest" => query.OrderByDescending(m => m.CreatedAt),
+            "Oldest" => query.OrderBy(m => m.CreatedAt),
+            "TitleAZ" => query.OrderBy(m => m.Title),
+            "TitleZA" => query.OrderByDescending(m => m.Title),
+            "MostViews" => query.OrderByDescending(m => m.Chapters.Sum(c => c.ViewCount)),
+            "BestRated" => query.OrderByDescending(m => m.Rating),
+            "RecentlyUpdated" => query.OrderByDescending(m => m.UpdatedAt),
+            _ => query.OrderByDescending(m => m.UpdatedAt)
+        };
+
+        var result = await query.ToListAsync();
         
         ViewBag.Search = search;
-        ViewBag.Genre = genre;
-        ViewBag.Status = status;
+        ViewBag.SortBy = sortBy;
+        ViewBag.Types = types;
+        ViewBag.Genres = genres;
+        ViewBag.ExcludedGenres = excludedGenres;
+        ViewBag.Demographic = demographic;
+        ViewBag.ReleaseStatus = releaseStatus;
+        ViewBag.MinChapters = minChapters;
+        ViewBag.YearFrom = yearFrom;
+        ViewBag.YearTo = yearTo;
+        ViewBag.Author = author;
+        ViewBag.Artist = artist;
+
+        // Get all unique authors, artists, and genres for the filter dropdowns
+        ViewBag.AllAuthors = await _context.Mangas.Where(m => !string.IsNullOrEmpty(m.Author)).Select(m => m.Author).Distinct().ToListAsync();
+        ViewBag.AllArtists = await _context.Mangas.Where(m => !string.IsNullOrEmpty(m.Artist)).Select(m => m.Artist).Distinct().ToListAsync();
+        
+        var allGenresRaw = await _context.Mangas.Select(m => m.Genre).ToListAsync();
+        ViewBag.AllGenres = allGenresRaw
+            .SelectMany(g => g.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            .Select(g => g.Trim())
+            .Distinct()
+            .OrderBy(g => g)
+            .ToList();
 
         return View(result);
+    }
+
+    // GET: Series/Random
+    public async Task<IActionResult> Random()
+    {
+        var count = await _context.Mangas.CountAsync();
+        if (count == 0) return RedirectToAction("Index");
+        
+        var randomIndex = new Random().Next(0, count);
+        var manga = await _context.Mangas.Skip(randomIndex).FirstOrDefaultAsync();
+        
+        if (manga == null) return RedirectToAction("Index");
+        return RedirectToAction("Detail", new { id = manga.Id });
     }
 
     // GET: Series/Detail/5
@@ -135,6 +250,9 @@ public class SeriesController : Controller
         }
 
         // Increment view count and award XP if logged in
+        string userAgent = Request.Headers["User-Agent"].ToString();
+        string deviceType = GetDeviceType(userAgent);
+
         if (User.Identity?.IsAuthenticated ?? false)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
@@ -143,7 +261,13 @@ public class SeriesController : Controller
             if (!hasViewed)
             { 
                 chapter.ViewCount++;
-                _context.ChapterViews.Add(new ChapterView { UserId = userId, ChapterId = id });
+                _context.ChapterViews.Add(new ChapterView 
+                { 
+                    UserId = userId, 
+                    ChapterId = id,
+                    DeviceType = deviceType,
+                    UserAgent = userAgent.Length > 500 ? userAgent.Substring(0, 500) : userAgent
+                });
                 await AwardXpAsync(userId, 10); // 10 XP per chapter
                 await _context.SaveChangesAsync();
             }
@@ -155,6 +279,14 @@ public class SeriesController : Controller
             if (string.IsNullOrEmpty(HttpContext.Session.GetString(sessionKey)))
             {
                 chapter.ViewCount++;
+                // Track guest view in ChapterViews with UserId = 0
+                _context.ChapterViews.Add(new ChapterView 
+                { 
+                    UserId = 0, 
+                    ChapterId = id,
+                    DeviceType = deviceType,
+                    UserAgent = userAgent.Length > 500 ? userAgent.Substring(0, 500) : userAgent
+                });
                 await _context.SaveChangesAsync();
                 HttpContext.Session.SetString(sessionKey, "1");
             }
@@ -180,6 +312,15 @@ public class SeriesController : Controller
         }
 
         return View(chapter);
+    }
+
+    private string GetDeviceType(string userAgent)
+    {
+        if (string.IsNullOrEmpty(userAgent)) return "Desktop";
+        userAgent = userAgent.ToLower();
+        if (userAgent.Contains("ipad") || (userAgent.Contains("android") && !userAgent.Contains("mobile"))) return "Tablet";
+        if (userAgent.Contains("mobile") || userAgent.Contains("iphone") || userAgent.Contains("android")) return "Mobile";
+        return "Desktop";
     }
 
     private async Task AwardXpAsync(int userId, int amount)
@@ -229,7 +370,8 @@ public class SeriesController : Controller
                     {
                         UserId = user.Id,
                         DecorationId = dec.Id,
-                        UnlockedAt = DateTime.UtcNow
+                        UnlockedAt = DateTime.UtcNow,
+                        Origin = UnlockOrigin.LevelUnlock
                     });
                 }
             }
@@ -242,7 +384,8 @@ public class SeriesController : Controller
                     {
                         UserId = user.Id,
                         TitleId = title.Id,
-                        UnlockedAt = DateTime.UtcNow
+                        UnlockedAt = DateTime.UtcNow,
+                        Origin = UnlockOrigin.LevelUnlock
                     });
                 }
             }
@@ -576,7 +719,7 @@ public class SeriesController : Controller
     }
 
     [Authorize]
-    public async Task<IActionResult> Bookmarks()
+    public IActionResult Bookmarks()
     {
         return RedirectToAction("Profile", "Auth");
     }

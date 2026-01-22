@@ -11,6 +11,10 @@ public class ChapterView
 
     public int ChapterId { get; set; }
 
+    public string? DeviceType { get; set; } // Mobile, Desktop, Tablet
+
+    public string? UserAgent { get; set; }
+
     public DateTime ViewedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation

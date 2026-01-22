@@ -10,28 +10,232 @@
         <div class="section-header-divider"></div>
     </div>
 
-    <!-- Filters -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <form asp-action="Index" method="get" class="d-flex gap-2">
-                <input type="text" name="search" class="form-control" 
-                       placeholder="Search by title or author..." 
-                       value="@ViewBag.Search" 
-                       style="background: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
-                
-                <select name="status" class="form-select" style="background: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary); max-width: 150px;">
-                    <option value="">All Status</option>
-                    <option value="Ongoing" selected="@(ViewBag.Status == "Ongoing" ? "selected" : "")">Ongoing</option>
-                    <option value="Completed" selected="@(ViewBag.Status == "Completed" ? "selected" : "")">Completed</option>
-                    <option value="Hiatus" selected="@(ViewBag.Status == "Hiatus" ? "selected" : "")">Hiatus</option>
-                </select>
+    <!-- Advanced Filters -->
+    <div class="card mb-4" style="background: var(--bg-secondary); border-color: var(--border-color);">
+        <div class="card-body">
+            <form asp-action="Index" method="get" id="filterForm">
+                <div class="row g-3">
+                    <!-- Search Bar -->
+                    <div class="col-md-12">
+                        <div class="input-group">
+                            <span class="input-group-text" style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-muted);">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" name="search" class="form-control" placeholder="Search by title, author, or artist..." value="@ViewBag.Search" 
+                                   style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                        </div>
+                    </div>
 
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-search"></i> Search
-                </button>
+                    <!-- Sort By -->
+                    <div class="col-md-3">
+                        <label class="form-label small text-white">Sort By</label>
+                        <select name="sortBy" class="form-select" style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                            <option value="Default" selected="@(ViewBag.SortBy == "Default" ? "selected" : "")">Any</option>
+                            <option value="Newest" selected="@(ViewBag.SortBy == "Newest" ? "selected" : "")">Newest</option>
+                            <option value="Oldest" selected="@(ViewBag.SortBy == "Oldest" ? "selected" : "")">Oldest</option>
+                            <option value="TitleAZ" selected="@(ViewBag.SortBy == "TitleAZ" ? "selected" : "")">Title A-Z</option>
+                            <option value="TitleZA" selected="@(ViewBag.SortBy == "TitleZA" ? "selected" : "")">Title Z-A</option>
+                            <option value="MostViews" selected="@(ViewBag.SortBy == "MostViews" ? "selected" : "")">Most Views</option>
+                            <option value="BestRated" selected="@(ViewBag.SortBy == "BestRated" ? "selected" : "")">Best Rated</option>
+                            <option value="RecentlyUpdated" selected="@(ViewBag.SortBy == "RecentlyUpdated" ? "selected" : "")">Recently Updated</option>
+                        </select>
+                    </div>
+
+                    <!-- Types -->
+                    <div class="col-md-3">
+                        <label class="form-label small text-white">Types</label>
+                        <select name="types" class="form-select" style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                            <option value="Any" selected="@(ViewBag.Types == "Any" ? "selected" : "")">Any</option>
+                            <option value="Manga" selected="@(ViewBag.Types == "Manga" ? "selected" : "")">Manga</option>
+                            <option value="Manhua" selected="@(ViewBag.Types == "Manhua" ? "selected" : "")">Manhua</option>
+                            <option value="Manhwa" selected="@(ViewBag.Types == "Manhwa" ? "selected" : "")">Manhwa</option>
+                            <option value="Novel" selected="@(ViewBag.Types == "Novel" ? "selected" : "")">Novel</option>
+                        </select>
+                    </div>
+
+                    <!-- Demographic -->
+                    <div class="col-md-3">
+                        <label class="form-label small text-white">Demographic</label>
+                        <select name="demographic" class="form-select" style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                            <option value="Any" selected="@(ViewBag.Demographic == "Any" ? "selected" : "")">Any</option>
+                            <option value="Shounen" selected="@(ViewBag.Demographic == "Shounen" ? "selected" : "")">Shounen</option>
+                            <option value="Shoujo" selected="@(ViewBag.Demographic == "Shoujo" ? "selected" : "")">Shoujo</option>
+                            <option value="Seinen" selected="@(ViewBag.Demographic == "Seinen" ? "selected" : "")">Seinen</option>
+                            <option value="Josei" selected="@(ViewBag.Demographic == "Josei" ? "selected" : "")">Josei</option>
+                        </select>
+                    </div>
+
+                    <!-- Release Status -->
+                    <div class="col-md-3">
+                        <label class="form-label small text-white">Release Status</label>
+                        <select name="releaseStatus" class="form-select" style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                            <option value="Any" selected="@(ViewBag.ReleaseStatus == "Any" ? "selected" : "")">Any</option>
+                            <option value="Ongoing" selected="@(ViewBag.ReleaseStatus == "Ongoing" ? "selected" : "")">Ongoing</option>
+                            <option value="Completed" selected="@(ViewBag.ReleaseStatus == "Completed" ? "selected" : "")">Completed</option>
+                            <option value="Hiatus" selected="@(ViewBag.ReleaseStatus == "Hiatus" ? "selected" : "")">Hiatus</option>
+                            <option value="Cancelled" selected="@(ViewBag.ReleaseStatus == "Cancelled" ? "selected" : "")">Cancelled</option>
+                        </select>
+                    </div>
+
+                    <!-- Min Chapters -->
+                    <div class="col-md-2">
+                        <label class="form-label small text-white">Min Chapters</label>
+                        <input type="number" name="minChapters" class="form-control" placeholder="0" value="@ViewBag.MinChapters" 
+                               style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                    </div>
+
+                    <!-- Year From -->
+                    <div class="col-md-2">
+                        <label class="form-label small text-white">Year From</label>
+                        <input type="number" name="yearFrom" class="form-control" placeholder="YYYY" value="@ViewBag.YearFrom" 
+                               style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                    </div>
+
+                    <!-- Year To -->
+                    <div class="col-md-2">
+                        <label class="form-label small text-white">Year To</label>
+                        <input type="number" name="yearTo" class="form-control" placeholder="YYYY" value="@ViewBag.YearTo" 
+                               style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                    </div>
+
+                    <!-- Authors -->
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">Author</label>
+                        <select name="author" class="form-select" style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                            <option value="Any">Any</option>
+                            @foreach (var author in ViewBag.AllAuthors)
+                            {
+                                <option value="@author" selected="@(ViewBag.Author == author ? "selected" : "")">@author</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Artists -->
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">Artist</label>
+                        <select name="artist" class="form-select" style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                            <option value="Any">Any</option>
+                            @foreach (var artist in ViewBag.AllArtists)
+                            {
+                                <option value="@artist" selected="@(ViewBag.Artist == artist ? "selected" : "")">@artist</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Genres (Inclusive/Exclusive) -->
+                    <div class="col-12 mt-3">
+                        <label class="form-label small text-muted d-block">Genres (Click once to include, twice to exclude)</label>
+                        <div class="d-flex flex-wrap gap-2 p-2" style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 4px; max-height: 200px; overflow-y: auto;">
+                            @foreach (var genre in ViewBag.AllGenres)
+                            {
+                                <div class="genre-tag" data-genre="@genre" onclick="toggleGenre(this)">
+                                    @genre
+                                </div>
+                            }
+                        </div>
+                        <input type="hidden" name="genres" id="includedGenres" value="@ViewBag.Genres">
+                        <input type="hidden" name="excludedGenres" id="excludedGenres" value="@ViewBag.ExcludedGenres">
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="col-12 d-flex gap-2 justify-content-end mt-3">
+                        <button type="button" class="btn btn-secondary" onclick="resetFilters()">
+                            <i class="fas fa-undo me-1"></i> Reset Filters
+                        </button>
+                        <button type="button" class="btn btn-info text-white" onclick="feelingLucky()">
+                            <i class="fas fa-dice me-1"></i> I'm Feeling Lucky
+                        </button>
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="fas fa-filter me-1"></i> Apply Filter
+                        </button>
+                    </div>
+                </div>
             </form>
         </div>
     </div>
+
+    <style>
+        .genre-tag {
+            padding: 4px 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            user-select: none;
+            transition: all 0.2s;
+            color: var(--text-muted);
+        }
+        .genre-tag:hover {
+            border-color: var(--accent);
+            color: var(--text-primary);
+        }
+        .genre-tag.included {
+            background: rgba(40, 167, 69, 0.2);
+            border-color: #28a745;
+            color: #28a745;
+        }
+        .genre-tag.excluded {
+            background: rgba(220, 53, 69, 0.2);
+            border-color: #dc3545;
+            color: #dc3545;
+        }
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const included = '@ViewBag.Genres'.split(',').map(s => s.trim()).filter(s => s);
+            const excluded = '@ViewBag.ExcludedGenres'.split(',').map(s => s.trim()).filter(s => s);
+            
+            document.querySelectorAll('.genre-tag').forEach(tag => {
+                const genre = tag.dataset.genre;
+                if (included.includes(genre)) {
+                    tag.classList.add('included');
+                } else if (excluded.includes(genre)) {
+                    tag.classList.add('excluded');
+                }
+            });
+        });
+
+        function toggleGenre(el) {
+            const genre = el.dataset.genre;
+            if (el.classList.contains('included')) {
+                el.classList.remove('included');
+                el.classList.add('excluded');
+            } else if (el.classList.contains('excluded')) {
+                el.classList.remove('excluded');
+            } else {
+                el.classList.add('included');
+            }
+            updateGenreInputs();
+        }
+
+        function updateGenreInputs() {
+            const included = [];
+            const excluded = [];
+            document.querySelectorAll('.genre-tag').forEach(tag => {
+                if (tag.classList.contains('included')) included.push(tag.dataset.genre);
+                if (tag.classList.contains('excluded')) excluded.push(tag.dataset.genre);
+            });
+            document.getElementById('includedGenres').value = included.join(',');
+            document.getElementById('excludedGenres').value = excluded.join(',');
+        }
+
+        function resetFilters() {
+            const form = document.getElementById('filterForm');
+            form.querySelectorAll('input:not([type="hidden"])').forEach(i => i.value = '');
+            form.querySelectorAll('select').forEach(s => s.value = s.options[0].value);
+            document.querySelectorAll('.genre-tag').forEach(tag => {
+                tag.classList.remove('included', 'excluded');
+            });
+            updateGenreInputs();
+            form.submit();
+        }
+
+        function feelingLucky() {
+            window.location.href = '@Url.Action("Random", "Series")';
+        }
+    </script>
 
     <!-- Series Grid -->
     <div class="row g-4 mb-5">

@@ -1,0 +1,100 @@
+@{
+    ViewData["Title"] = "Blogger Chapter Import";
+    Layout = "_AdminLayout";
+    var mangas = ViewBag.Mangas as List<MangaReader.Models.Manga> ?? new List<MangaReader.Models.Manga>();
+}
+
+<div class="admin-card">
+    <div class="card-header">
+        <h4 class="text-white"><i class="fab fa-blogger me-2"></i> Blogger Chapter Importer</h4>
+        <p class="text-white-50 small mb-0">Extract chapters and images from your Blogger site automatically.</p>
+    </div>
+    
+    <div class="card-body">
+        <form asp-action="BloggerImport" method="post" id="importForm">
+            @Html.AntiForgeryToken()
+            
+            <div class="row g-4">
+                <div class="col-md-8">
+                    <div class="mb-3">
+                        <label for="bloggerUrl" class="form-label text-white">Blogger URL or Feed URL</label>
+                        <input type="text" class="form-control admin-input" id="bloggerUrl" name="bloggerUrl" 
+                               placeholder="e.g. dflowscans.blogspot.com" value="dflowscans.blogspot.com" required>
+                        <div class="form-text text-white-50">
+                            You can enter the blog URL (e.g. dflowscans.blogspot.com) or a full feed URL.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="mangaId" class="form-label text-white">Target Manga</label>
+                        <select class="form-select admin-input" id="mangaId" name="mangaId" required>
+                            <option value="">-- Select Manga to Import Into --</option>
+                            @foreach (var manga in mangas)
+                            {
+                                <option value="@manga.Id">@manga.Title</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="seriesTag" class="form-label text-white">Series Label (Chapter Identifier)</label>
+                        <input type="text" class="form-control admin-input" id="seriesTag" name="seriesTag" placeholder="e.g. Mutual Love">
+                        <div class="form-text text-white-50">
+                            The unique label identifying this series in chapter posts (found in the manga post's <code>data-labelchapter</code>).
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="chapterTag" class="form-label text-white">General Chapter Tag</label>
+                        <input type="text" class="form-control admin-input" id="chapterTag" name="chapterTag" value="chapter" placeholder="e.g. chapter">
+                        <div class="form-text text-white-50">
+                            The label used to identify a post as a chapter. Default is "chapter".
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <button type="submit" class="btn-fix w-100" id="submitBtn">
+                            <i class="fas fa-download me-2"></i> Start Import
+                        </button>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="p-3 rounded border border-secondary bg-dark bg-opacity-25">
+                        <h6 class="text-info fw-bold mb-3"><i class="fas fa-info-circle me-2"></i> How it works</h6>
+                        <ul class="small text-white-50 ps-3 mb-0">
+                            <li class="mb-2">The tool connects to the Blogger JSON feed.</li>
+                            <li class="mb-2"><strong>Filtering:</strong> It only imports posts that have BOTH the <em>Series Tag</em> and the <em>Chapter Tag</em>.</li>
+                            <li class="mb-2">It attempts to parse the chapter number from the post title.</li>
+                            <li class="mb-2">All <code>&lt;img&gt;</code> tags in the post content are extracted as chapter pages.</li>
+                            <li class="mb-2">Note: Images are linked directly from Blogger/Google servers.</li>
+                        </ul>
+                        
+                        <div class="alert alert-warning mt-3 mb-0 py-2 px-3 small">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Warning:</strong> Large imports may take a few moments. Do not refresh the page.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="loadingOverlay" class="d-none" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+    <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <h5 class="text-white">Importing chapters...</h5>
+    <p class="text-white-50">This may take a minute depending on the number of posts.</p>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('importForm').addEventListener('submit', function() {
+            document.getElementById('loadingOverlay').classList.remove('d-none');
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submitBtn').innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Processing...';
+        });
+    </script>
+}

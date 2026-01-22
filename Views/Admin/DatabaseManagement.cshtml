@@ -1,0 +1,84 @@
+@{
+    ViewData["Title"] = "Database Management";
+    Layout = "_AdminLayout";
+}
+
+<div class="admin-card">
+    <div class="card-header">
+        <h4 class="text-white"><i class="fas fa-database me-2"></i> Database Management</h4>
+        <p class="text-white-50 small mb-0">Export or import your site data using JSON backup files.</p>
+    </div>
+    
+    <div class="card-body">
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="fas fa-check-circle me-2"></i> @TempData["Success"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i> @TempData["Error"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+
+        <div class="row g-4">
+            <!-- Export Section -->
+            <div class="col-md-6">
+                <div class="p-4 rounded border border-secondary bg-dark bg-opacity-25 h-100">
+                    <h5 class="text-white mb-3"><i class="fas fa-download me-2 text-primary"></i> Export Data</h5>
+                    <p class="text-white-50 small mb-4">
+                        Download a complete backup of your database including Manga, Chapters, Users, and Settings in JSON format.
+                    </p>
+                    <a href="@Url.Action("ExportDatabase", "Admin")" class="btn btn-primary w-100">
+                        <i class="fas fa-file-export me-2"></i> Download JSON Backup
+                    </a>
+                </div>
+            </div>
+
+            <!-- Import Section -->
+            <div class="col-md-6">
+                <div class="p-4 rounded border border-secondary bg-dark bg-opacity-25 h-100">
+                    <h5 class="text-white mb-3"><i class="fas fa-upload me-2 text-success"></i> Import Data</h5>
+                    <p class="text-white-50 small mb-4">
+                        Restore data from a previously exported JSON backup file. Existing records with the same ID will be skipped.
+                    </p>
+                    <form asp-action="ImportDatabase" method="post" enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
+                        <div class="mb-3">
+                            <input type="file" name="backupFile" class="form-control admin-input" accept=".json" required>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100" onclick="return confirm('Are you sure you want to import this data? Existing records will be preserved.')">
+                            <i class="fas fa-file-import me-2"></i> Start JSON Import
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4 p-3 rounded border border-warning bg-warning bg-opacity-10">
+            <h6 class="text-warning fw-bold mb-2"><i class="fas fa-exclamation-circle me-2"></i> Important Note</h6>
+            <p class="text-white-50 small mb-0">
+                JSON backups are portable and can be used to move data between different environments. 
+                Unlike .bak files, these do not require specific SQL Server versions or permissions to restore.
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .admin-input {
+        background: var(--bg-secondary) !important;
+        border-color: var(--border-color) !important;
+        color: var(--text-primary) !important;
+    }
+    .admin-input:focus {
+        background: var(--bg-tertiary) !important;
+        border-color: var(--primary-color) !important;
+        box-shadow: none;
+    }
+</style>

@@ -53,6 +53,7 @@ public class Manga
     public double TitleShadowOpacity { get; set; } = 0.8;
 
     public int? AniListId { get; set; }
+    public bool IsSuggestive { get; set; }
 
     // Navigation
     public ICollection<Chapter> Chapters { get; set; } = new List<Chapter>();

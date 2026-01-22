@@ -22,6 +22,31 @@ namespace MangaReader.Migrations
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
+            modelBuilder.Entity("MangaReader.Models.ChangelogEntry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ChangelogEntries");
+                });
+
             modelBuilder.Entity("MangaReader.Models.Chapter", b =>
                 {
                     b.Property<int>("Id")
@@ -51,7 +76,6 @@ namespace MangaReader.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("Title")
-                        .IsRequired()
                         .HasMaxLength(300)
                         .HasColumnType("varchar(300)");
 
@@ -92,6 +116,9 @@ namespace MangaReader.Migrations
                     b.Property<int?>("ParentCommentId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("RepliedToUserId")
+                        .HasColumnType("int");
+
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 
@@ -100,6 +127,8 @@ namespace MangaReader.Migrations
                     b.HasIndex("ChapterId");
 
                     b.HasIndex("ParentCommentId");
+
+                    b.HasIndex("RepliedToUserId");
 
                     b.HasIndex("UserId");
 
@@ -206,6 +235,9 @@ namespace MangaReader.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("AniListId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Artist")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -249,6 +281,9 @@ namespace MangaReader.Migrations
                         .HasColumnType("varchar(500)");
 
                     b.Property<bool>("IsFeatured")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsSuggestive")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<DateTime?>("LastChapterDate")
@@ -336,7 +371,7 @@ namespace MangaReader.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Notifications");
+                    b.ToTable("Notifications", (string)null);
                 });
 
             modelBuilder.Entity("MangaReader.Models.PfpDecoration", b =>
@@ -425,13 +460,34 @@ namespace MangaReader.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("CustomAccentColor")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("CustomBackgroundUrl")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("CustomCss")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("CustomPrimaryColor")
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("DisableFeaturedBanners")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<int?>("EquippedDecorationId")
                         .HasColumnType("int");
 
                     b.Property<int?>("EquippedTitleId")
                         .HasColumnType("int");
 
+                    b.Property<bool>("FollowChangelog")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("HideReadingList")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IgnoreSuggestiveWarnings")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("IsActive")
@@ -450,6 +506,12 @@ namespace MangaReader.Migrations
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)");
+
+                    b.Property<bool>("ShowAllFeaturedAsCovers")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<double?>("SiteOpacity")
+                        .HasColumnType("double");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)");
@@ -478,12 +540,17 @@ namespace MangaReader.Migrations
                         {
                             Id = 1,
                             CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisableFeaturedBanners = false,
+                            FollowChangelog = true,
                             HideReadingList = false,
+                            IgnoreSuggestiveWarnings = false,
                             IsActive = true,
                             IsAdmin = true,
                             IsSubAdmin = false,
                             Level = 1,
                             PasswordHash = "$2a$11$yNru262Z6gimpMKoGk0MpOYyn4jijDcLpHruW1.VtclJAsIAwg2mq",
+                            ShowAllFeaturedAsCovers = false,
+                            SiteOpacity = 1.0,
                             UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Username = "Admin",
                             XP = 0
@@ -627,6 +694,9 @@ namespace MangaReader.Migrations
                     b.Property<int>("DecorationId")
                         .HasColumnType("int");
 
+                    b.Property<int>("Origin")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("UnlockedAt")
                         .HasColumnType("datetime(6)");
 
@@ -637,9 +707,10 @@ namespace MangaReader.Migrations
 
                     b.HasIndex("DecorationId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "DecorationId")
+                        .IsUnique();
 
-                    b.ToTable("UserUnlockedDecoration");
+                    b.ToTable("UserUnlockedDecoration", (string)null);
                 });
 
             modelBuilder.Entity("MangaReader.Models.UserUnlockedTitle", b =>
@@ -649,6 +720,9 @@ namespace MangaReader.Migrations
                         .HasColumnType("int");
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Origin")
+                        .HasColumnType("int");
 
                     b.Property<int>("TitleId")
                         .HasColumnType("int");
@@ -663,9 +737,10 @@ namespace MangaReader.Migrations
 
                     b.HasIndex("TitleId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "TitleId")
+                        .IsUnique();
 
-                    b.ToTable("UserUnlockedTitle");
+                    b.ToTable("UserUnlockedTitle", (string)null);
                 });
 
             modelBuilder.Entity("MangaReader.Models.Chapter", b =>
@@ -691,6 +766,11 @@ namespace MangaReader.Migrations
                         .WithMany("Replies")
                         .HasForeignKey("ParentCommentId");
 
+                    b.HasOne("MangaReader.Models.User", "RepliedToUser")
+                        .WithMany()
+                        .HasForeignKey("RepliedToUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("MangaReader.Models.User", "User")
                         .WithMany("Comments")
                         .HasForeignKey("UserId")
@@ -700,6 +780,8 @@ namespace MangaReader.Migrations
                     b.Navigation("Chapter");
 
                     b.Navigation("ParentComment");
+
+                    b.Navigation("RepliedToUser");
 
                     b.Navigation("User");
                 });

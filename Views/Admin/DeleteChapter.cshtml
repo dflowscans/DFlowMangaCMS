@@ -19,7 +19,7 @@
 
                 <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 2rem;">
                     <p style="margin: 0.3rem 0; font-size: 0.9rem;">
-                        <strong>Manga:</strong> @Model.Manga.Title
+                        <strong>Manga:</strong> @(Model.Manga?.Title ?? "Unknown Manga")
                     </p>
                     <p style="margin: 0.3rem 0; font-size: 0.9rem;">
                         <strong>Chapter:</strong> @Model.ChapterNumber @(string.IsNullOrEmpty(Model.Title) ? "" : "- " + Model.Title)

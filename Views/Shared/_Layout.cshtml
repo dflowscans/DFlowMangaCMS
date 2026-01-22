@@ -1,3 +1,24 @@
+@using Microsoft.EntityFrameworkCore
+@using MangaReader.Models
+@inject MangaReader.Data.ApplicationDbContext _context
+
+@{
+    User? currentUser = null;
+    if (User.Identity?.IsAuthenticated ?? false)
+    {
+        var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (int.TryParse(userIdStr, out var userId))
+        {
+            try {
+                currentUser = _context.Users.FirstOrDefault(u => u.Id == userId);
+            } catch {
+                // If the table schema is outdated, we'll fall back to no user settings
+                // This allows the admin to still access the dashboard to fix the database
+            }
+        }
+    }
+}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,6 +35,53 @@
         }
         .notification-item.unread {
             background: rgba(99, 102, 241, 0.03);
+        }
+
+        @if (currentUser != null)
+        {
+            <text>
+            :root {
+                @if (!string.IsNullOrEmpty(currentUser.CustomPrimaryColor))
+                {
+                    <text>--primary-color: @currentUser.CustomPrimaryColor !important;</text>
+                    <text>--primary-light: @currentUser.CustomPrimaryColor !important;</text>
+                    <text>--primary-dark: @currentUser.CustomPrimaryColor !important;</text>
+                }
+                @if (!string.IsNullOrEmpty(currentUser.CustomAccentColor))
+                {
+                    <text>--accent: @currentUser.CustomAccentColor !important;</text>
+                }
+            }
+
+            @if (!string.IsNullOrEmpty(currentUser.CustomBackgroundUrl))
+            {
+                <text>
+                body {
+                    background-image: url('@currentUser.CustomBackgroundUrl') !important;
+                    background-attachment: fixed !important;
+                    background-size: cover !important;
+                    background-position: center !important;
+                }
+                body::before {
+                    content: none !important;
+                }
+                </text>
+            }
+
+            @if (currentUser.SiteOpacity.HasValue && currentUser.SiteOpacity.Value < 1.0)
+            {
+                <text>
+                .navbar, .card, .dropdown-menu, footer, .bg-secondary, .bg-secondary-custom, .admin-sidebar, .admin-topbar {
+                    opacity: @currentUser.SiteOpacity.Value !important;
+                }
+                </text>
+            }
+
+            @if (!string.IsNullOrEmpty(currentUser.CustomCss))
+            {
+                @Html.Raw(currentUser.CustomCss)
+            }
+            </text>
         }
     </style>
 </head>

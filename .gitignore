@@ -10,6 +10,7 @@
 *.userosscache
 *.sln.docstates
 *.env
+.env.*
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -97,6 +98,11 @@ StyleCopReport.xml
 *.rsp
 # but not Directory.Build.rsp, as it configures directory-level build defaults
 !Directory.Build.rsp
+
+# Database credentials and configuration
+Program.cs
+appsettings.json
+appsettings.Development.json
 *.sbr
 *.tlb
 *.tli

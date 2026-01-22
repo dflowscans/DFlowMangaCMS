@@ -3,6 +3,8 @@
     var user = ViewBag.User as User;
     var bookmarks = ViewBag.Bookmarks as List<UserBookmark>;
     var stats = ViewBag.ReadingStats;
+    var unlockedDecorations = ViewBag.UnlockedDecorations as List<UserUnlockedDecoration> ?? new List<UserUnlockedDecoration>();
+    var unlockedTitles = ViewBag.UnlockedTitles as List<UserUnlockedTitle> ?? new List<UserUnlockedTitle>();
     ViewData["Title"] = $"{user?.Username}'s Profile";
 }
 
@@ -10,7 +12,7 @@
     <!-- Profile Header -->
     <div class="card mb-4" style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 15px; overflow: hidden;">
         <div class="card-body p-4">
-            <div class="row align-items-center">
+            <div class="row">
                 <div class="col-md-auto text-center mb-3 mb-md-0">
                     @{
                         var profileAvatarUrl = string.IsNullOrWhiteSpace(user?.AvatarUrl) 
@@ -25,50 +27,104 @@
                         }
                     </div>
                 </div>
-                <div class="col-md">
-                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                        <h2 class="mb-0 text-white" style="font-weight: 700;">@user?.Username</h2>
-                        @if (user?.IsAdmin == true)
-                        {
-                            <span class="badge bg-danger">Admin</span>
-                        }
-                        else if (user?.IsSubAdmin == true)
-                        {
-                            <span class="badge bg-warning text-dark">Sub-Admin</span>
-                        }
+                <div class="col-md d-flex flex-column">
+                    <div class="flex-grow-1">
+                        <div class="d-flex flex-wrap align-items-center gap-3 mb-2">
+                            <h2 class="mb-0 text-white" style="font-weight: 700;">@user?.Username</h2>
+                            @if (user?.IsAdmin == true)
+                            {
+                                <span class="badge bg-danger">Admin</span>
+                            }
+                            else if (user?.IsSubAdmin == true)
+                            {
+                                <span class="badge bg-warning text-dark">Sub-Admin</span>
+                            }
+                        </div>
+
+                        <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+                            @if (user?.EquippedTitle != null)
+                            {
+                                <span class="badge" style="background: rgba(0,0,0,0.3); border: 1px solid @(user.EquippedTitle.Color ?? "transparent"); color: @(user.EquippedTitle.Color ?? "inherit"); font-weight: bold; font-size: 0.9rem; padding: 5px 12px;">
+                                    @user.EquippedTitle.Name
+                                </span>
+                            }
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress" style="height: 10px; width: 120px; background: var(--bg-tertiary); border-radius: 5px; margin-bottom: 0;">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" 
+                                         style="width: @ViewBag.XpProgress%; background: linear-gradient(90deg, #6366f1, #ec4899);" 
+                                         aria-valuenow="@user?.XP" aria-valuemin="0" aria-valuemax="@ViewBag.XpToNextLevel"></div>
+                                </div>
+                                <small class="text-white-50">@user?.XP / @ViewBag.XpToNextLevel XP</small>
+                            </div>
+                            <span class="badge bg-primary">Level @user?.Level</span>
+                        </div>
                     </div>
 
-                    @if (user?.EquippedTitle != null)
-                    {
-                        <div class="mb-3">
-                            <span class="badge" style="background: rgba(0,0,0,0.3); border: 1px solid @(user.EquippedTitle.Color ?? "transparent"); color: @(user.EquippedTitle.Color ?? "inherit"); font-weight: bold; font-size: 0.9rem; padding: 5px 12px;">
-                                @user.EquippedTitle.Name
-                            </span>
+                    <div class="d-flex flex-wrap gap-4 align-items-center mt-auto">
+                        <div class="d-flex align-items-center gap-2 px-3 py-2" style="background: rgba(255,255,255,0.05); border-radius: 10px; border: 1px solid var(--border-color);">
+                            <i class="fas fa-comments text-primary"></i>
+                            <div>
+                                <div class="text-white-50" style="font-size: 0.7rem; text-uppercase: uppercase; letter-spacing: 0.5px;">Comments</div>
+                                <div class="h6 mb-0 text-white fw-bold">@ViewBag.TotalComments</div>
+                            </div>
                         </div>
-                    }
-
-                    <div class="d-flex flex-wrap gap-4">
-                        <div class="text-center">
-                            <div class="text-white small text-uppercase">Level</div>
-                            <div class="h5 mb-0 text-white">@user?.Level</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-white small text-uppercase">XP</div>
-                            <div class="h5 mb-0 text-white">@user?.XP</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-white small text-uppercase">Comments</div>
-                            <div class="h5 mb-0 text-white">@ViewBag.TotalComments</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-white small text-uppercase">Joined</div>
-                            <div class="h5 mb-0 text-white">@user?.CreatedAt.ToString("MMM yyyy")</div>
+                        <div class="d-flex align-items-center gap-2 px-3 py-2" style="background: rgba(255,255,255,0.05); border-radius: 10px; border: 1px solid var(--border-color);">
+                            <i class="fas fa-calendar-alt text-white"></i>
+                            <div>
+                                <div class="text-white-50" style="font-size: 0.7rem; text-uppercase: uppercase; letter-spacing: 0.5px;">Joined</div>
+                                <div class="h6 mb-0 text-white fw-bold">@user?.CreatedAt.ToString("MMM yyyy")</div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    @if (unlockedTitles.Any() || unlockedDecorations.Any())
+    {
+        <div class="card mb-4" style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px;">
+            <div class="card-header" style="background: var(--bg-tertiary); border-bottom: 1px solid var(--border-color);">
+                <h5 class="mb-0 text-white"><i class="fas fa-trophy me-2 text-warning"></i>Collection</h5>
+            </div>
+            <div class="card-body">
+                @if (unlockedTitles.Any())
+                {
+                    <h6 class="text-white-50 small text-uppercase mb-3">Unlocked Titles</h6>
+                    <div class="d-flex flex-wrap gap-2 mb-4">
+                        @foreach (var ut in unlockedTitles)
+                        {
+                            if (ut.Title != null)
+                            {
+                                <span class="badge" style="background: rgba(0,0,0,0.3); border: 1px solid @(ut.Title.Color ?? "transparent"); color: @(ut.Title.Color ?? "inherit"); font-weight: bold; font-size: 0.8rem; padding: 5px 12px;">
+                                    @ut.Title.Name
+                                </span>
+                            }
+                        }
+                    </div>
+                }
+
+                @if (unlockedDecorations.Any())
+                {
+                    <h6 class="text-white-50 small text-uppercase mb-3">Unlocked Decorations</h6>
+                    <div class="row g-3">
+                        @foreach (var ud in unlockedDecorations)
+                        {
+                            if (ud.Decoration != null)
+                            {
+                                <div class="col-auto">
+                                    <div class="position-relative d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid var(--border-color);" title="@ud.Decoration.Name">
+                                        <img src="@profileAvatarUrl" alt="Avatar" style="width: 80%; height: 80%; border-radius: 50%; opacity: 0.3;" />
+                                        <img src="@ud.Decoration.ImageUrl" alt="@ud.Decoration.Name" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" />
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
 
     <div class="row">
         <!-- Sidebar: Reading Stats -->
@@ -117,6 +173,21 @@
                         <i class="fas fa-user-shield fa-2x mb-3 text-primary"></i>
                         <h6 class="text-white">Private Profile</h6>
                         <p class="text-muted small mb-0">This user's reading activity is hidden.</p>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(user?.CustomCss))
+            {
+                <div class="card mb-4" style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px;">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background: var(--bg-tertiary); border-bottom: 1px solid var(--border-color);">
+                        <h5 class="mb-0 text-white"><i class="fas fa-code me-2"></i>Custom CSS</h5>
+                        <button class="btn btn-sm btn-outline-primary" onclick="copyCustomCss(this)" data-css="@user.CustomCss">
+                            <i class="fas fa-copy me-1"></i>Copy
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <pre class="m-0 p-3" style="max-height: 200px; overflow-y: auto; font-size: 0.8rem; background: rgba(0,0,0,0.2); color: var(--text-secondary); font-family: monospace;"><code>@user.CustomCss</code></pre>
                     </div>
                 </div>
             }
@@ -206,3 +277,21 @@
         font-weight: 600;
     }
 </style>
+
+<script>
+    function copyCustomCss(button) {
+        const css = button.getAttribute('data-css');
+        navigator.clipboard.writeText(css).then(() => {
+            const originalHtml = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
+            button.classList.remove('btn-outline-primary');
+            button.classList.add('btn-success');
+            
+            setTimeout(() => {
+                button.innerHTML = originalHtml;
+                button.classList.remove('btn-success');
+                button.classList.add('btn-outline-primary');
+            }, 2000);
+        });
+    }
+</script>

@@ -55,4 +55,15 @@ public class User
     // Settings
     public bool HideReadingList { get; set; } = false;
     public bool FollowChangelog { get; set; } = true;
+
+    // Customization
+    public string? CustomPrimaryColor { get; set; }
+    public string? CustomAccentColor { get; set; }
+    public string? CustomCss { get; set; }
+    public bool DisableFeaturedBanners { get; set; } = false;
+    public bool ShowAllFeaturedAsCovers { get; set; } = false;
+    public string? CustomBackgroundUrl { get; set; }
+    public double? SiteOpacity { get; set; } = 1.0;
+
+    public bool IgnoreSuggestiveWarnings { get; set; } = false;
 }

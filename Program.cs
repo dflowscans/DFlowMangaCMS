@@ -11,7 +11,7 @@ var builder = WebApplication.CreateBuilder(args);
 var mysqlHost = Environment.GetEnvironmentVariable("MYSQL_HOST");
 if (string.IsNullOrWhiteSpace(mysqlHost))
 {
-    mysqlHost = "YOUR_DATABASE_HOST_IP"; // e.g., "127.0.0.1"
+    mysqlHost = "5.175.192.162";
     Environment.SetEnvironmentVariable("MYSQL_HOST", mysqlHost);
 }
 
@@ -25,21 +25,21 @@ if (string.IsNullOrWhiteSpace(mysqlPort))
 var mysqlDb = Environment.GetEnvironmentVariable("MYSQL_DB");
 if (string.IsNullOrWhiteSpace(mysqlDb))
 {
-    mysqlDb = "YOUR_DATABASE_NAME";
+    mysqlDb = "s14_DFlowScans";
     Environment.SetEnvironmentVariable("MYSQL_DB", mysqlDb);
 }
 
 var mysqlUser = Environment.GetEnvironmentVariable("MYSQL_USER");
 if (string.IsNullOrWhiteSpace(mysqlUser))
 {
-    mysqlUser = "YOUR_DATABASE_USER";
+    mysqlUser = "u14_FI3QF79zRV";
     Environment.SetEnvironmentVariable("MYSQL_USER", mysqlUser);
 }
 
 var mysqlPassword = Environment.GetEnvironmentVariable("MYSQL_PASSWORD");
 if (string.IsNullOrWhiteSpace(mysqlPassword))
 {
-    mysqlPassword = "YOUR_DATABASE_PASSWORD";
+    mysqlPassword = "aRFQ5PHImCpI!AfJulrR7@I@";
     Environment.SetEnvironmentVariable("MYSQL_PASSWORD", mysqlPassword);
 }
 
@@ -103,18 +103,51 @@ using (var scope = app.Services.CreateScope())
             await command.ExecuteNonQueryAsync();
         }
 
-        // Add FollowChangelog to Users table
-        try
+        // Ensure IsSuggestive column exists in Mangas table
+        command.CommandText = "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_NAME = 'Mangas' AND COLUMN_NAME = 'IsSuggestive' AND TABLE_SCHEMA = DATABASE();";
+        var suggestResult = await command.ExecuteScalarAsync();
+        if (Convert.ToInt32(suggestResult) == 0)
         {
-            command.CommandText = "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_NAME = 'Users' AND COLUMN_NAME = 'FollowChangelog' AND TABLE_SCHEMA = DATABASE();";
-            var followColResult = await command.ExecuteScalarAsync();
-            if (Convert.ToInt32(followColResult) == 0)
-            {
-                command.CommandText = "ALTER TABLE Users ADD COLUMN FollowChangelog TINYINT(1) NOT NULL DEFAULT 1;";
-                await command.ExecuteNonQueryAsync();
-            }
+            command.CommandText = "ALTER TABLE Mangas ADD COLUMN IsSuggestive TINYINT(1) NOT NULL DEFAULT 0;";
+            await command.ExecuteNonQueryAsync();
         }
-        catch { /* Might already exist */ }
+
+        // Ensure Title column in Chapters table is nullable
+        command.CommandText = "ALTER TABLE Chapters MODIFY COLUMN Title VARCHAR(300) NULL;";
+        await command.ExecuteNonQueryAsync();
+
+        // 8. Add RepliedToUserId to ChapterComments
+         try
+         {
+             command.CommandText = "ALTER TABLE ChapterComments ADD COLUMN RepliedToUserId INT NULL;";
+             await command.ExecuteNonQueryAsync();
+             command.CommandText = "ALTER TABLE ChapterComments ADD CONSTRAINT FK_ChapterComments_Users_RepliedToUserId FOREIGN KEY (RepliedToUserId) REFERENCES Users(Id);";
+             await command.ExecuteNonQueryAsync();
+         }
+         catch { /* Column might already exist */ }
+
+          // 9. Add ChangelogEntries table
+          command.CommandText = @"
+              CREATE TABLE IF NOT EXISTS ChangelogEntries (
+                  Id INT AUTO_INCREMENT PRIMARY KEY,
+                  Title VARCHAR(200) NOT NULL,
+                  Content TEXT NOT NULL,
+                  CreatedAt DATETIME NOT NULL
+              );";
+          await command.ExecuteNonQueryAsync();
+
+          // 10. Add FollowChangelog to Users table
+          try
+          {
+              command.CommandText = "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_NAME = 'Users' AND COLUMN_NAME = 'FollowChangelog' AND TABLE_SCHEMA = DATABASE();";
+              var followColResult = await command.ExecuteScalarAsync();
+              if (Convert.ToInt32(followColResult) == 0)
+              {
+                  command.CommandText = "ALTER TABLE Users ADD COLUMN FollowChangelog TINYINT(1) NOT NULL DEFAULT 1;";
+                  await command.ExecuteNonQueryAsync();
+              }
+          }
+          catch { /* Might already exist */ }
     }
     catch (Exception ex)
     {
@@ -127,21 +160,34 @@ using (var scope = app.Services.CreateScope())
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
-app.UseRouting();
 app.UseSession();
+app.UseRouting();
 
+// Add authentication and authorization middleware
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapRazorPages(); // Map Razor Pages endpoints
 app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+        name: "default",
+        pattern: "{controller=Home}/{action=Index}/{id?}")
+    ;
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    try
+    {
+        db.Database.EnsureCreated();
+    }
+    catch
+    {
+    }
+}
 
 app.Run();

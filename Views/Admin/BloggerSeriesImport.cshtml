@@ -1,0 +1,76 @@
+@{
+    ViewData["Title"] = "Blogger Series Importer";
+    Layout = "_AdminLayout";
+}
+
+<div class="admin-card">
+    <div class="card-header">
+        <h4 class="text-white"><i class="fab fa-blogger me-2"></i> Blogger Series Importer</h4>
+        <p class="text-white-50 small mb-0">Create a new manga/manhua/manhwa series by importing its data from a Blogger post.</p>
+    </div>
+    
+    <div class="card-body">
+        <form asp-action="BloggerSeriesImport" method="post" id="importForm">
+            @Html.AntiForgeryToken()
+            
+            <div class="row g-4">
+                <div class="col-md-8">
+                    <div class="mb-3">
+                        <label for="htmlContent" class="form-label text-white">Blogger Post HTML Content</label>
+                        <textarea class="form-control admin-input" id="htmlContent" name="htmlContent" rows="10" 
+                                  placeholder="Paste the HTML code of the Blogger post here..." required></textarea>
+                        <div class="form-text text-white-50">
+                            Paste the HTML containing the cover image, description, release year, and chapter hook.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="tags" class="form-label text-white">Blogger Post Tags (Comma-separated)</label>
+                        <input type="text" class="form-control admin-input" id="tags" name="tags" 
+                               placeholder="e.g. Series,She is gorgeous,Manhua,Dropped,Josei,Age Gap,Comedy,Drama,Romance,Showbiz" required>
+                        <div class="form-text text-white-50">
+                            The tags associated with the Blogger post. Used to determine Type, Status, and Genres.
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <button type="submit" class="btn-fix w-100" id="submitBtn">
+                            <i class="fas fa-magic me-2"></i> Import Series
+                        </button>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="p-3 rounded border border-secondary bg-dark bg-opacity-25">
+                        <h6 class="text-info fw-bold mb-3"><i class="fas fa-info-circle me-2"></i> How it works</h6>
+                        <ul class="small text-white-50 ps-3 mb-0">
+                            <li class="mb-2"><strong>Title:</strong> Extracted from the <code>data-labelchapter</code> attribute in the HTML.</li>
+                            <li class="mb-2"><strong>Cover Image:</strong> Extracted from the first <code>&lt;img&gt;</code> within a <code>separator</code> div.</li>
+                            <li class="mb-2"><strong>Description:</strong> Extracted from the element with ID <code>syn_bod</code>.</li>
+                            <li class="mb-2"><strong>Type:</strong> Identified from tags (Manga, Manhua, or Manhwa).</li>
+                            <li class="mb-2"><strong>Status:</strong> Identified from tags (Dropped, Ongoing, Completed, or Hiatus).</li>
+                            <li class="mb-2"><strong>Genres:</strong> All other tags (excluding 'Series', Title, Type, and Status) are added as genres.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="loadingOverlay" class="d-none" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+    <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <h5 class="text-white">Processing Import...</h5>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('importForm').addEventListener('submit', function() {
+            document.getElementById('loadingOverlay').classList.remove('d-none');
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submitBtn').innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Processing...';
+        });
+    </script>
+}

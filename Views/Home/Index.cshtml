@@ -1,12 +1,29 @@
 @model IEnumerable<MangaReader.Models.Manga>
+@using Microsoft.EntityFrameworkCore
+@using MangaReader.Models
+@inject MangaReader.Data.ApplicationDbContext _context
 
 @{
     ViewData["Title"] = "Home";
+    
+    User? currentUser = null;
+    if (User.Identity?.IsAuthenticated ?? false)
+    {
+        var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (int.TryParse(userIdStr, out var userId))
+        {
+            currentUser = _context.Users.FirstOrDefault(u => u.Id == userId);
+        }
+    }
+
     // Get a random featured manga, or the first one marked as featured
     var featuredMangas = Model?.Where(m => m.IsFeatured).ToList() ?? new List<MangaReader.Models.Manga>();
     var allMangas = Model?.ToList() ?? new List<MangaReader.Models.Manga>();
     var featuredManga = featuredMangas.Any() ? featuredMangas.First() : allMangas.FirstOrDefault();
     var latestManga = Model?.OrderByDescending(m => m.UpdatedAt).Take(6) ?? new List<MangaReader.Models.Manga>();
+
+    bool disableBanners = currentUser?.DisableFeaturedBanners ?? false;
+    bool showAsCovers = currentUser?.ShowAllFeaturedAsCovers ?? false;
 }
 
 <div class="container">
@@ -29,8 +46,8 @@
         </div>
     }
 
-    <!-- Featured Manga Section (Carousel) -->
-    @if (featuredMangas.Any())
+    <!-- Featured Manga Section -->
+    @if (!disableBanners && (featuredMangas.Any() || featuredManga != null))
     {
         <section class="mb-5">
             <div class="section-header">
@@ -38,103 +55,142 @@
                 <div class="section-header-divider"></div>
             </div>
 
-            <div class="featured-nav-wrap">
-                <button class="featured-nav-btn left" type="button" data-bs-target="#featuredCarousel" data-bs-slide="prev">
-                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                    <span class="visually-hidden">Previous</span>
-                </button>
-
-                <div id="featuredCarousel" class="manual-slide-track">
-                <div class="carousel-indicators">
-                    @for (int i = 0; i < featuredMangas.Count; i++)
+            @if (showAsCovers)
+            {
+                <div class="row g-4">
+                    @foreach (var fm in featuredMangas.Any() ? featuredMangas : new List<Manga> { featuredManga! })
                     {
-                        <button type="button" data-bs-target="#featuredCarousel" data-bs-slide-to="@i" class="@(i == 0 ? "active" : "")" aria-current="@(i == 0 ? "true" : "false")" aria-label="Slide @(i+1)"></button>
-                    }
-                </div>
-
-                <div class="featured-track">
-                    @for (int i = 0; i < featuredMangas.Count; i++)
-                    {
-                        var fm = featuredMangas[i];
-                        var rawImg = fm.BannerUrl ?? fm.ImageUrl ?? "/images/default.jpg";
-                        var safeImg = (rawImg ?? "/images/default.jpg").Replace("`", "").Trim();
-                        <div class="featured-slide @(i == 0 ? "active" : "")">
-                            <div class="featured-item" style="background-image: url('@safeImg'); background-size: cover; background-position: @(fm.BannerPositionX)% @(fm.BannerPositionY)%;">
-                                <div class="featured-overlay">
-                                    @{ 
-                                        var a = fm.TitleShadowOpacity; 
-                                        var primary = Math.Min(a, 1); 
-                                        var secondary = Math.Max(a - 1, 0); 
-                                        var shadowCss = fm.HasTitleShadow ? (secondary > 0 ? $"0 2px {fm.TitleShadowSize}px rgba(0,0,0,1), 0 2px {fm.TitleShadowSize}px rgba(0,0,0,{Math.Min(secondary,1)})" : $"0 2px {fm.TitleShadowSize}px rgba(0,0,0,{primary})") : "none"; 
-                                        
-                                        var enableBannerShadow = ViewBag.EnableBannerShadow == "true";
-                                        var shadowStrength = ViewBag.BannerShadowStrength ?? "0.8";
-                                        var shadowDepth = ViewBag.BannerShadowDepth ?? "4";
-                                        var descriptionShadow = enableBannerShadow ? $"text-shadow: 0 2px {shadowDepth}px rgba(0,0,0,{shadowStrength});" : "";
-                                        
-                                        var description = fm.Description ?? "";
-                                        var mobileDescription = description.Length > 100 ? description.Substring(0, 100) + "..." : description;
-                                    }
-                                    <h3 class="featured-title" style="text-shadow:@shadowCss">@fm.Title</h3>
-                                    <p class="featured-description d-none d-md-block" style="@descriptionShadow">@description</p>
-                                    <p class="featured-description d-block d-md-none" style="@descriptionShadow">@mobileDescription</p>
-                                    <div class="featured-meta">
-                                        <span>
-                                            <i class="fas fa-user me-2"></i>@fm.Author
-                                        </span>
-                                        <span>
-                                            <i class="fas fa-book me-2"></i>@(fm.Chapters?.Count ?? 0) Chapters
-                                        </span>
-                                        <span>
-                                            <i class="fas fa-star me-2"></i>@((fm.Rating ?? 0) / 10.0)/5
-                                        </span>
+                        var statusClass = (fm.Status?.ToLowerInvariant() ?? "") switch
+                        {
+                            "ongoing" => "status-ongoing",
+                            "completed" => "status-completed",
+                            "dropped" => "status-dropped",
+                            "on hold" => "status-onhold",
+                            "coming soon" => "status-comingsoon",
+                            _ => "status-default"
+                        };
+                        <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                            <div class="manga-card-v2" style="position: relative; transition: transform 0.3s ease; border-radius: 12px; overflow: hidden; background: var(--bg-secondary); border: 1px solid var(--border-color);">
+                                <a asp-controller="Series" asp-action="Detail" asp-route-id="@fm.Id" class="text-decoration-none">
+                                    <div class="manga-card-image" style="position: relative; padding-top: 140%; overflow: hidden;">
+                                        <img src="@(fm.ImageUrl ?? "/images/default.jpg")" alt="@fm.Title" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;">
+                                        <div class="manga-card-badges" style="position: absolute; top: 10px; left: 10px; display: flex; flex-direction: column; gap: 5px; z-index: 2;">
+                                            <span class="badge bg-primary" style="font-size: 0.7rem; padding: 4px 8px;">@(fm.Type ?? "Manga")</span>
+                                            <span class="badge @statusClass" style="font-size: 0.7rem; padding: 4px 8px;">@fm.Status</span>
+                                        </div>
+                                        <div class="manga-card-overlay" style="position: absolute; bottom: 0; left: 0; right: 0; padding: 15px; background: linear-gradient(transparent, rgba(0,0,0,0.8)); z-index: 2;">
+                                            <h5 class="text-white mb-0" style="font-size: 0.9rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@fm.Title</h5>
+                                            <div class="d-flex align-items-center gap-2 mt-1">
+                                                <i class="fas fa-star text-warning" style="font-size: 0.7rem;"></i>
+                                                <span class="text-white-50" style="font-size: 0.7rem;">@((fm.Rating ?? 0) / 10.0)/5</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div style="margin-top: 1.5rem;">
-                                        <a asp-controller="Series" asp-action="Detail" asp-route-id="@fm.Id" class="btn btn-primary">Read Now</a>
-                                    </div>
-                                </div>
+                                </a>
                             </div>
                         </div>
                     }
                 </div>
-                </div>
-                <button class="featured-nav-btn right" type="button" data-bs-target="#featuredCarousel" data-bs-slide="next">
-                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                    <span class="visually-hidden">Next</span>
-                </button>
-            </div>
-        </section>
-    }
-    else if (featuredManga != null)
-    {
-        <section class="mb-5">
-            <div class="section-header">
-                <h2>Featured</h2>
-                <div class="section-header-divider"></div>
-            </div>
+            }
+            else if (featuredMangas.Any())
+            {
+                <div class="featured-nav-wrap">
+                    <button class="featured-nav-btn left" type="button" data-bs-target="#featuredCarousel" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Previous</span>
+                    </button>
 
-            @{ var rawImgSingle = featuredManga.BannerUrl ?? featuredManga.ImageUrl ?? "/images/default.jpg"; var safeImgSingle = (rawImgSingle ?? "/images/default.jpg").Replace("`", "").Trim(); }
-            <div class="featured-item" style="background-image: url('@safeImgSingle'); background-size: cover; background-position: center;">
-                <div class="featured-overlay">
-                    @{ var aa = featuredManga.TitleShadowOpacity; var p = Math.Min(aa, 1); var s = Math.Max(aa - 1, 0); var shadowSingle = featuredManga.HasTitleShadow ? (s > 0 ? $"0 2px {featuredManga.TitleShadowSize}px rgba(0,0,0,1), 0 2px {featuredManga.TitleShadowSize}px rgba(0,0,0,{Math.Min(s,1)})" : $"0 2px {featuredManga.TitleShadowSize}px rgba(0,0,0,{p})") : "none"; }
-                    <h3 class="featured-title" style="text-shadow:@shadowSingle">@featuredManga.Title</h3>
-                    <p class="featured-description">@featuredManga.Description</p>
-                    <div class="featured-meta">
-                        <span>
-                            <i class="fas fa-user me-2"></i>@featuredManga.Author
-                        </span>
-                        <span>
-                            <i class="fas fa-book me-2"></i>@(featuredManga.Chapters?.Count ?? 0) Chapters
-                        </span>
-                        <span>
-                            <i class="fas fa-star me-2"></i>@((featuredManga.Rating ?? 0) / 10.0)/5
-                        </span>
+                    <div id="featuredCarousel" class="manual-slide-track">
+                        <div class="carousel-indicators">
+                            @for (int i = 0; i < featuredMangas.Count; i++)
+                            {
+                                <button type="button" data-bs-target="#featuredCarousel" data-bs-slide-to="@i" class="@(i == 0 ? "active" : "")" aria-current="@(i == 0 ? "true" : "false")" aria-label="Slide @(i+1)"></button>
+                            }
+                        </div>
+
+                        <div class="featured-track">
+                            @for (int i = 0; i < featuredMangas.Count; i++)
+                            {
+                                var fm = featuredMangas[i];
+                                var rawImg = fm.BannerUrl ?? fm.ImageUrl ?? "/images/default.jpg";
+                                var safeImg = (rawImg ?? "/images/default.jpg").Replace("`", "").Trim();
+                                
+                                var a = fm.TitleShadowOpacity; 
+                                var primary = Math.Min(a, 1); 
+                                var secondary = Math.Max(a - 1, 0); 
+                                var shadowCss = fm.HasTitleShadow ? (secondary > 0 ? $"0 2px {fm.TitleShadowSize}px rgba(0,0,0,1), 0 2px {fm.TitleShadowSize}px rgba(0,0,0,{Math.Min(secondary,1)})" : $"0 2px {fm.TitleShadowSize}px rgba(0,0,0,{primary})") : "none"; 
+                                
+                                var enableBannerShadow = ViewBag.EnableBannerShadow == "true";
+                                var shadowStrength = ViewBag.BannerShadowStrength ?? "0.8";
+                                var shadowDepth = ViewBag.BannerShadowDepth ?? "4";
+                                var descriptionShadow = enableBannerShadow ? $"text-shadow: 0 2px {shadowDepth}px rgba(0,0,0,{shadowStrength});" : "";
+                                
+                                var description = fm.Description ?? "";
+                                var mobileDescription = description.Length > 100 ? description.Substring(0, 100) + "..." : description;
+
+                                <div class="featured-slide @(i == 0 ? "active" : "")">
+                                    <div class="featured-item" style="background-image: url('@safeImg'); background-size: cover; background-position: @(fm.BannerPositionX)% @(fm.BannerPositionY)%;">
+                                        <div class="featured-overlay">
+                                            <h3 class="featured-title" style="text-shadow:@shadowCss">@fm.Title</h3>
+                                            <p class="featured-description d-none d-md-block" style="@descriptionShadow">@description</p>
+                                            <p class="featured-description d-block d-md-none" style="@descriptionShadow">@mobileDescription</p>
+                                            <div class="featured-meta">
+                                                <span>
+                                                    <i class="fas fa-user me-2"></i>@fm.Author
+                                                </span>
+                                                <span>
+                                                    <i class="fas fa-book me-2"></i>@(fm.Chapters?.Count ?? 0) Chapters
+                                                </span>
+                                                <span>
+                                                    <i class="fas fa-star me-2"></i>@((fm.Rating ?? 0) / 10.0)/5
+                                                </span>
+                                            </div>
+                                            <div style="margin-top: 1.5rem;">
+                                                <a asp-controller="Series" asp-action="Detail" asp-route-id="@fm.Id" class="btn btn-primary">Read Now</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
                     </div>
-                    <div style="margin-top: 1.5rem;">
-                        <a asp-controller="Series" asp-action="Detail" asp-route-id="@featuredManga.Id" class="btn btn-primary">Read Now</a>
+                    <button class="featured-nav-btn right" type="button" data-bs-target="#featuredCarousel" data-bs-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Next</span>
+                    </button>
+                </div>
+            }
+            else if (featuredManga != null)
+            {
+                var rawImgSingle = featuredManga.BannerUrl ?? featuredManga.ImageUrl ?? "/images/default.jpg"; 
+                var safeImgSingle = (rawImgSingle ?? "/images/default.jpg").Replace("`", "").Trim();
+                
+                var aa = featuredManga.TitleShadowOpacity; 
+                var p = Math.Min(aa, 1); 
+                var s = Math.Max(aa - 1, 0); 
+                var shadowSingle = featuredManga.HasTitleShadow ? (s > 0 ? $"0 2px {featuredManga.TitleShadowSize}px rgba(0,0,0,1), 0 2px {featuredManga.TitleShadowSize}px rgba(0,0,0,{Math.Min(s,1)})" : $"0 2px {featuredManga.TitleShadowSize}px rgba(0,0,0,{p})") : "none"; 
+
+                <div class="featured-item" style="background-image: url('@safeImgSingle'); background-size: cover; background-position: center;">
+                    <div class="featured-overlay">
+                        <h3 class="featured-title" style="text-shadow:@shadowSingle">@featuredManga.Title</h3>
+                        <p class="featured-description">@featuredManga.Description</p>
+                        <div class="featured-meta">
+                            <span>
+                                <i class="fas fa-user me-2"></i>@featuredManga.Author
+                            </span>
+                            <span>
+                                <i class="fas fa-book me-2"></i>@(featuredManga.Chapters?.Count ?? 0) Chapters
+                            </span>
+                            <span>
+                                <i class="fas fa-star me-2"></i>@((featuredManga.Rating ?? 0) / 10.0)/5
+                            </span>
+                        </div>
+                        <div style="margin-top: 1.5rem;">
+                            <a asp-controller="Series" asp-action="Detail" asp-route-id="@featuredManga.Id" class="btn btn-primary">Read Now</a>
+                        </div>
                     </div>
                 </div>
-            </div>
+            }
         </section>
     }
 
