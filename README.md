@@ -2,7 +2,11 @@
 A custom MangaCMS built on NET.ASP MVC and Razor pages.
 
 ## ⚠️ Warning:
-- Uploading actual image files as chapter pages does **NOT** work.<br>
+- Uploading actual image files as chapter pages does **NOT** work. Use direct image links instead.<br>
+
+- Also I'm not sure if this project is going in a direction I like so I don't think I'll continue it. I'm thinking of trying to make a CMS again and putting more time and effort into it but honestly I'm not sure how it'll go. If you like this CMS feel free to continue using it tho I will give you a final warning. It does NOT have a way to backup your database so either back it up directly from your DB host yourself or...
+
+- If you want you can fork this repo and continue working on it.
 
 Please don't make any issues about that.<br>
 I plan to add it in the somewhat near future.
